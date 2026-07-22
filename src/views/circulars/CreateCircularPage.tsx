@@ -77,7 +77,7 @@ export default function CreateCircularPage() {
         setPriority(existing.priority);
         setTargetDepts(existing.targetDepts);
         setTargetUsers(existing.targetUsers || []);
-        setSelectedApprovers(existing.approvalFlow);
+        setSelectedApprovers(existing.approvalFlow || ["hod", "principal"]);
       }
     }
   }, [editId, circulars]);
@@ -138,6 +138,7 @@ export default function CreateCircularPage() {
           targetUsers,
           approvalFlow,
           status: initStatus(type, user!.role, approvalFlow),
+          signatures: [],
           comments: [...existing.comments, updateComment]
         };
         updateCircular(updatedCircular);
