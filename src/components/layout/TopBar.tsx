@@ -1,15 +1,19 @@
 import { Bell, Search } from "lucide-react";
-import type { User, Circular, Page } from "../../lib/types";
+import type { User, Circular } from "../../lib/types";
 import { canAct, visibleTo, fmtDate } from "../../lib/helpers";
 
 interface Props {
-  user: User;
   title: string;
-  circulars: Circular[];
-  onNavigate: (p: Page) => void;
 }
 
-export default function TopBar({ user, title, circulars, onNavigate }: Props) {
+import { useAppContext } from "../../lib/context/AppContext";
+import { useRouter } from "next/navigation";
+
+export default function TopBar({ title }: Props) {
+  const { currentUser: user, circulars } = useAppContext();
+  const router = useRouter();
+  
+  if (!user) return null;
   const myCirculars = visibleTo(user, circulars);
   const pendingAlerts = myCirculars.filter(c => canAct(user, c)).length;
   const changesAlerts = myCirculars.filter(c => c.status === "changes_requested" && c.createdById === user.id).length;
@@ -31,7 +35,7 @@ export default function TopBar({ user, title, circulars, onNavigate }: Props) {
         </div>
 
         <button
-          onClick={() => onNavigate("notifications")}
+          onClick={() => router.push("/notifications")}
           className="relative p-2 rounded-lg hover:bg-[#f4f6fc] transition-colors text-[#5a6483] hover:text-[#0f1c3f]"
         >
           <Bell size={16} />

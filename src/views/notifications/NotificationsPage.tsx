@@ -2,11 +2,8 @@ import { Bell, Clock, AlertCircle, CheckCircle, ChevronRight } from "lucide-reac
 import type { User, Circular } from "../../lib/types";
 import { canAct, visibleTo, fmtDateTime } from "../../lib/helpers";
 
-interface Props {
-  user: User;
-  circulars: Circular[];
-  onSelectCircular: (id: string) => void;
-}
+import { useAppContext } from "../../lib/context/AppContext";
+import { useRouter } from "next/navigation";
 
 type NotifType = "action" | "changes" | "approved";
 
@@ -19,7 +16,11 @@ interface Notif {
   circularId: string;
 }
 
-export default function NotificationsPage({ user, circulars, onSelectCircular }: Props) {
+export default function NotificationsPage() {
+  const { currentUser: user, circulars } = useAppContext();
+  const router = useRouter();
+
+  if (!user) return null;
   const myCirculars = visibleTo(user, circulars);
 
   const notifs: Notif[] = [
@@ -85,7 +86,7 @@ export default function NotificationsPage({ user, circulars, onSelectCircular }:
         {notifs.map(n => (
           <button
             key={n.id}
-            onClick={() => onSelectCircular(n.circularId)}
+            onClick={() => router.push(`/circulars/${n.circularId}`)}
             className={`w-full text-left flex items-start gap-4 p-4 rounded-xl border transition-all hover:shadow-sm ${BG[n.type]}`}
           >
             <div className="w-8 h-8 bg-white rounded-lg flex items-center justify-center shrink-0 shadow-sm">

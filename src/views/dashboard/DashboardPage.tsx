@@ -4,12 +4,8 @@ import { canAct, visibleTo, fmtDate, fmtDateTime, typeLabel, typeCls, statusLabe
 import StatusBadge from "../../components/shared/StatusBadge";
 import { COLLEGE_NAME } from "../../lib/data";
 
-interface Props {
-  user: User;
-  circulars: Circular[];
-  onNavigate: (p: Page) => void;
-  onSelectCircular: (id: string) => void;
-}
+import { useAppContext } from "../../lib/context/AppContext";
+import { useRouter } from "next/navigation";
 
 const ROLE_LABEL: Record<Role, string> = {
   staff: "Faculty Member",
@@ -20,7 +16,11 @@ const ROLE_LABEL: Record<Role, string> = {
   event_coordinator: "Event Coordinator",
 };
 
-export default function DashboardPage({ user, circulars, onNavigate, onSelectCircular }: Props) {
+export default function DashboardPage() {
+  const { currentUser: user, circulars } = useAppContext();
+  const router = useRouter();
+
+  if (!user) return null;
   const myCirculars = visibleTo(user, circulars);
 
   const stats = {
@@ -96,7 +96,7 @@ export default function DashboardPage({ user, circulars, onNavigate, onSelectCir
             </div>
             <div className="divide-y divide-[#f0f2f8]">
               {actionItems.map(c => (
-                <button key={c.id} onClick={() => onSelectCircular(c.id)}
+                <button key={c.id} onClick={() => router.push(`/circulars/${c.id}`)}
                   className="w-full px-5 py-3 hover:bg-[#f8faff] transition-colors text-left flex items-start gap-3 group">
                   <span className="w-1.5 h-1.5 rounded-full bg-amber-400 mt-1.5 shrink-0" />
                   <div className="min-w-0 flex-1">
@@ -109,7 +109,7 @@ export default function DashboardPage({ user, circulars, onNavigate, onSelectCir
             </div>
             {stats.actionRequired > 4 && (
               <div className="px-5 py-2.5 border-t border-[#f0f2f8]">
-                <button onClick={() => onNavigate("circulars")} className="text-xs text-[#1a3567] font-medium hover:underline">
+                <button onClick={() => router.push("/circulars")} className="text-xs text-[#1a3567] font-medium hover:underline">
                   View all {stats.actionRequired} items →
                 </button>
               </div>
@@ -127,7 +127,7 @@ export default function DashboardPage({ user, circulars, onNavigate, onSelectCir
             </div>
             <div className="divide-y divide-[#f0f2f8]">
               {changesItems.map(c => (
-                <button key={c.id} onClick={() => onSelectCircular(c.id)}
+                <button key={c.id} onClick={() => router.push(`/circulars/${c.id}`)}
                   className="w-full px-5 py-3 hover:bg-[#f8faff] transition-colors text-left flex items-start gap-3 group">
                   <span className="w-1.5 h-1.5 rounded-full bg-orange-400 mt-1.5 shrink-0" />
                   <div className="min-w-0 flex-1">
@@ -149,7 +149,7 @@ export default function DashboardPage({ user, circulars, onNavigate, onSelectCir
             <h3 className="text-sm font-semibold text-[#0f1c3f] flex items-center gap-2">
               <TrendingUp size={15} className="text-[#1a3567]" /> Recent Circulars
             </h3>
-            <button onClick={() => onNavigate("circulars")} className="text-xs text-[#1a3567] hover:underline font-medium">
+            <button onClick={() => router.push("/circulars")} className="text-xs text-[#1a3567] hover:underline font-medium">
               View all
             </button>
           </div>
@@ -158,7 +158,7 @@ export default function DashboardPage({ user, circulars, onNavigate, onSelectCir
               <div className="py-12 text-center text-sm text-[#9aa3bf]">No circulars found</div>
             )}
             {recent.map(c => (
-              <button key={c.id} onClick={() => onSelectCircular(c.id)}
+              <button key={c.id} onClick={() => router.push(`/circulars/${c.id}`)}
                 className="w-full px-5 py-3 hover:bg-[#f8faff] transition-colors text-left flex items-center gap-4 group">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-0.5 flex-wrap">

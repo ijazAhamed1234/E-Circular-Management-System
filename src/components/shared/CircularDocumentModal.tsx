@@ -180,8 +180,8 @@ export default function CircularDocumentModal({ circular: c, user, onClose, onUp
           {/* KIOT Letterhead */}
           <div className="border-b-2 border-[#1a3567] pb-3 mb-0">
             <div className="flex items-center gap-3">
-              <div className="w-14 h-14 rounded-lg bg-white border border-[#e2e7f0] flex items-center justify-center shadow-sm overflow-hidden shrink-0">
-                <img src={kiotLogo} alt="KIOT Logo" className="w-full h-full object-contain p-0.5" />
+              <div className="w-14 h-14 rounded-lg bg-white border border-[#e2e7f0] flex items-center justify-center p-0.5 overflow-hidden shrink-0">
+                <img src={kiotLogo.src} alt="KIOT Logo" className="w-full h-full object-contain" />
               </div>
               <div className="flex-1 text-center">
                 <h1 className="text-[15px] font-bold text-[#1a3567] leading-tight uppercase tracking-wide">

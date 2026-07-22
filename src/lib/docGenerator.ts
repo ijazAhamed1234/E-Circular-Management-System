@@ -514,7 +514,7 @@ export async function downloadDocx(circular: Circular): Promise<void> {
           borders: {
             bottom: BORDER_THICK_NAVY,
             top: BORDER_NONE, left: BORDER_NONE, right: BORDER_NONE,
-            insideH: BORDER_NONE, insideV: BORDER_NONE,
+            insideHorizontal: BORDER_NONE, insideVertical: BORDER_NONE,
           },
         }),
 

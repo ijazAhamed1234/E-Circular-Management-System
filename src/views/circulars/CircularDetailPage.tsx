@@ -14,20 +14,25 @@ import kiotLogo from "../../imports/images.png";
 import StatusBadge from "../../components/shared/StatusBadge";
 import { SignatureSVG, ApprovedStamp } from "../../components/shared/SignatureSVG";
 import CircularDocumentModal from "../../components/shared/CircularDocumentModal";
+import { useAppContext } from "../../lib/context/AppContext";
+import { useRouter } from "next/navigation";
 
 interface Props {
   circular: Circular;
-  user: User;
-  onBack: () => void;
-  onUpdateCircular: (updated: Circular) => void;
 }
 
-export default function CircularDetailPage({ circular: c, user, onBack, onUpdateCircular }: Props) {
+export default function CircularDetailPage({ circular: c }: Props) {
+  const { currentUser: user, updateCircular } = useAppContext();
+  const router = useRouter();
+  
   const [showAction, setShowAction] = useState(false);
+
   const [actionType, setActionType] = useState<"approve" | "changes" | "reject">("approve");
   const [comment, setComment] = useState("");
   const [showDoc, setShowDoc] = useState(false);
   const [showModal, setShowModal] = useState(false);
+
+  if (!user) return null;
 
   const userCanAct = canAct(user, c);
   const isCreator = c.createdById === user.id;
@@ -37,9 +42,9 @@ export default function CircularDetailPage({ circular: c, user, onBack, onUpdate
     const now = new Date().toISOString();
     const newComment: ActivityComment = {
       id: `cm-${Date.now()}`,
-      authorId: user.id,
-      authorName: user.name,
-      designation: user.designation,
+      authorId: user!.id,
+      authorName: user!.name,
+      designation: user!.designation,
       message: comment.trim() || "Approved and digitally signed.",
       timestamp: now,
       type: actionType === "approve" ? "approval" : actionType === "changes" ? "changes_requested" : "rejected",
@@ -48,13 +53,13 @@ export default function CircularDetailPage({ circular: c, user, onBack, onUpdate
     let newSigs = [...c.signatures];
     if (actionType === "approve") {
       newStatus = nextStatus(c);
-      newSigs.push({ userId: user.id, userName: user.name, designation: user.designation, department: user.department, signedAt: now });
+      newSigs.push({ userId: user!.id, userName: user!.name, designation: user!.designation, department: user!.department, signedAt: now });
     } else if (actionType === "changes") {
       newStatus = "changes_requested";
     } else {
       newStatus = "rejected";
     }
-    onUpdateCircular({ ...c, status: newStatus, signatures: newSigs, comments: [...c.comments, newComment] });
+    updateCircular({ ...c, status: newStatus, signatures: newSigs, comments: [...c.comments, newComment] });
     setShowAction(false);
     setComment("");
   }
@@ -62,12 +67,12 @@ export default function CircularDetailPage({ circular: c, user, onBack, onUpdate
   function handleResubmit() {
     const now = new Date().toISOString();
     const newComment: ActivityComment = {
-      id: `cm-${Date.now()}`, authorId: user.id, authorName: user.name,
-      designation: user.designation,
+      id: `cm-${Date.now()}`, authorId: user!.id, authorName: user!.name,
+      designation: user!.designation,
       message: "Circular revised and resubmitted for approval.",
       timestamp: now, type: "resubmitted",
     };
-    onUpdateCircular({ ...c, status: initStatus(c.type, c.createdByRole), comments: [...c.comments, newComment] });
+    updateCircular({ ...c, status: initStatus(c.type, c.createdByRole), comments: [...c.comments, newComment] });
   }
 
   const steps = getWorkflowSteps(c, USERS);
@@ -91,7 +96,7 @@ export default function CircularDetailPage({ circular: c, user, onBack, onUpdate
     <div className="p-6 space-y-5">
       {/* Top controls */}
       <div className="flex items-center justify-between flex-wrap gap-3">
-        <button onClick={onBack} className="flex items-center gap-1.5 text-sm text-[#5a6483] hover:text-[#0f1c3f] transition-colors">
+        <button onClick={() => router.push("/circulars")} className="flex items-center gap-1.5 text-sm text-[#5a6483] hover:text-[#0f1c3f] transition-colors">
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
             <path d="M10 12L6 8l4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
@@ -135,7 +140,7 @@ export default function CircularDetailPage({ circular: c, user, onBack, onUpdate
           <div className="text-center border-b-2 border-[#1a3567] pb-5 mb-6">
             <div className="flex items-center justify-center gap-4 mb-3">
               <div className="w-14 h-14 rounded-xl bg-white border border-[#e2e7f0] flex items-center justify-center shadow-sm overflow-hidden shrink-0">
-                <img src={kiotLogo} alt="KIOT Logo" className="w-full h-full object-contain p-0.5" />
+                <img src={kiotLogo.src} alt="KIOT Logo" className="w-full h-full object-contain p-0.5" />
               </div>
               <div>
                 <h1 className="text-xl font-bold text-[#1a3567]" style={{ fontFamily: "'Playfair Display', serif" }}>
@@ -489,7 +494,7 @@ export default function CircularDetailPage({ circular: c, user, onBack, onUpdate
           circular={c}
           user={user}
           onClose={() => setShowModal(false)}
-          onUpdateCircular={updated => { onUpdateCircular(updated); setShowModal(false); }}
+          onUpdateCircular={updated => { updateCircular(updated); setShowModal(false); }}
         />
       )}
     </div>

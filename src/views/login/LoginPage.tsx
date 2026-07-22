@@ -7,9 +7,7 @@ import type { User, Role } from "../../lib/types";
 import { USERS, COLLEGE_NAME, COLLEGE_SHORT, COLLEGE_AFFILIATION } from "../../lib/data";
 import kiotLogo from "../../imports/images.png";
 
-interface Props {
-  onLogin: (user: User) => void;
-}
+import { useAppContext } from "../../lib/context/AppContext";
 
 function GoogleIcon() {
   return (
@@ -31,7 +29,8 @@ const ROLE_CHIP: Record<Role, { cls: string; icon: React.ReactNode; label: strin
   event_coordinator: { cls: "bg-pink-50 text-pink-700 border-pink-200", icon: <CalendarDays size={10} />, label: "Event Coordinator" },
 };
 
-export default function LoginPage({ onLogin }: Props) {
+export default function LoginPage() {
+  const { login } = useAppContext();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPw, setShowPw] = useState(false);
@@ -42,7 +41,7 @@ export default function LoginPage({ onLogin }: Props) {
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     const user = USERS.find(u => u.email === email && u.password === password);
-    if (user) onLogin(user);
+    if (user) login(user);
     else setError("Invalid email or password. Please try a demo account below.");
   }
 
@@ -71,7 +70,7 @@ export default function LoginPage({ onLogin }: Props) {
         {/* Logo + college name */}
         <div className="relative z-10 flex items-center gap-3 px-9 pt-9">
           <div className="w-11 h-11 rounded-xl bg-white/95 flex items-center justify-center shadow-lg overflow-hidden p-0.5">
-            <img src={kiotLogo} alt="KIOT Logo" className="w-full h-full object-contain p-0.5" />
+            <img src={kiotLogo.src} alt="KIOT Logo" className="w-full h-full object-contain p-0.5" />
           </div>
           <div>
             <p className="text-[#c8a84b] text-sm font-bold tracking-widest">{COLLEGE_SHORT}</p>
@@ -153,7 +152,7 @@ export default function LoginPage({ onLogin }: Props) {
           {/* Mobile logo */}
           <div className="lg:hidden text-center mb-7">
             <div className="inline-flex items-center justify-center w-14 h-14 rounded-xl border border-[#e2e7f0] bg-white shadow-sm overflow-hidden mb-2 p-1">
-              <img src={kiotLogo} alt="KIOT Logo" className="w-full h-full object-contain p-0.5" />
+              <img src={kiotLogo.src} alt="KIOT Logo" className="w-full h-full object-contain p-0.5" />
             </div>
             <p className="text-sm font-bold text-[#0f1c3f]">{COLLEGE_NAME}</p>
           </div>

@@ -5,11 +5,8 @@ import { initStatus } from "../../lib/helpers";
 import RichTextEditor from "../../components/shared/RichTextEditor";
 import { downloadDocx, stripHtml, DIST_DEPTS, resolveCheckedDepts } from "../../lib/docGenerator";
 
-interface Props {
-  user: User;
-  onSubmit: (c: Circular) => void;
-  onCancel: () => void;
-}
+import { useAppContext } from "../../lib/context/AppContext";
+import { useRouter } from "next/navigation";
 
 const ALL_DEPTS: Dept[] = [
   "Computer Science",
@@ -48,7 +45,11 @@ const SIGNING_ORDER: Role[] = ["hod", "placement_director", "event_coordinator",
 const LABEL_CLS = "block text-[11px] font-bold text-[#0f1c3f] mb-1.5 uppercase tracking-wider";
 const INPUT_CLS = "w-full px-3.5 py-2.5 rounded-xl border border-[#d0d8ee] bg-[#f8faff] text-sm text-[#0f1c3f] placeholder:text-[#b0b9d4] focus:outline-none focus:ring-2 focus:ring-[#1a3567]/20 focus:border-[#1a3567] transition-all";
 
-export default function CreateCircularPage({ user, onSubmit, onCancel }: Props) {
+export default function CreateCircularPage() {
+  const { currentUser: user, createCircular } = useAppContext();
+  const router = useRouter();
+
+  if (!user) return null;
   const [title,        setTitle]        = useState("");
   const [type,         setType]         = useState<CircularType>(user.role === "placement_coordinator" ? "placement" : "departmental");
   const [subject,      setSubject]      = useState("");
@@ -85,16 +86,16 @@ export default function CreateCircularPage({ user, onSubmit, onCancel }: Props) 
     setSubmitting(true);
 
     const now = new Date().toISOString();
-    const deptCode = user.department.split(" ").map(w => w[0]).join("").toUpperCase();
+    const deptCode = user!.department.split(" ").map(w => w[0]).join("").toUpperCase();
     const year = new Date().getFullYear();
     const seq = String(Math.floor(Math.random() * 900) + 100);
     const refNo = `KIOT/${deptCode}/${year}-${String(year + 1).slice(-2)}/${seq}`;
 
     const firstComment: ActivityComment = {
       id: `cm-${Date.now()}`,
-      authorId: user.id,
-      authorName: user.name,
-      designation: user.designation,
+      authorId: user!.id,
+      authorName: user!.name,
+      designation: user!.designation,
       message: "Circular submitted for approval.",
       timestamp: now,
       type: "submitted",
@@ -105,17 +106,17 @@ export default function CreateCircularPage({ user, onSubmit, onCancel }: Props) 
       refNo,
       title: title.trim(),
       type,
-      department: user.department,
-      targetDepts: targetDepts.length > 0 ? targetDepts : [user.department as Dept],
+      department: user!.department,
+      targetDepts: targetDepts.length > 0 ? targetDepts : [user!.department as Dept],
       subject: subject.trim(),
       content: plainContent,
       contentHtml,
       approvalFlow,
-      createdById: user.id,
-      createdByName: user.name,
-      createdByRole: user.role,
+      createdById: user!.id,
+      createdByName: user!.name,
+      createdByRole: user!.role,
       createdAt: now,
-      status: initStatus(type, user.role, approvalFlow),
+      status: initStatus(type, user!.role, approvalFlow),
       priority,
       signatures: [],
       comments: [firstComment],
@@ -124,7 +125,7 @@ export default function CreateCircularPage({ user, onSubmit, onCancel }: Props) 
 
     await downloadDocx(newCircular);
     setSubmitting(false);
-    onSubmit(newCircular);
+    createCircular(newCircular);
   }
 
   return (
@@ -132,7 +133,7 @@ export default function CreateCircularPage({ user, onSubmit, onCancel }: Props) 
       {/* Header */}
       <div className="flex items-start gap-3 mb-6">
         <button
-          onClick={onCancel}
+          onClick={() => router.push("/circulars")}
           className="flex items-center gap-1.5 text-sm text-[#5a6483] hover:text-[#0f1c3f] transition-colors mt-0.5 shrink-0"
         >
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
@@ -372,7 +373,7 @@ export default function CreateCircularPage({ user, onSubmit, onCancel }: Props) 
             </div>
             <button
               type="button"
-              onClick={onCancel}
+              onClick={() => router.push("/circulars")}
               className="sm:ml-auto text-sm text-[#5a6483] hover:text-[#0f1c3f] px-4 py-2.5 rounded-xl hover:bg-[#f4f6fc] transition-all border border-transparent hover:border-[#dde3f0]"
             >
               Cancel

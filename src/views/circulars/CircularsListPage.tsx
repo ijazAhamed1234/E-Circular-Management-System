@@ -5,13 +5,8 @@ import { visibleTo, canAct, fmtDate, typeLabel, typeCls, priorityCls, priorityLa
 import StatusBadge from "../../components/shared/StatusBadge";
 import CircularDocumentModal from "../../components/shared/CircularDocumentModal";
 
-interface Props {
-  user: User;
-  circulars: Circular[];
-  onSelectCircular: (id: string) => void;
-  onNavigate: (p: Page) => void;
-  onUpdateCircular: (c: Circular) => void;
-}
+import { useAppContext } from "../../lib/context/AppContext";
+import { useRouter } from "next/navigation";
 
 // ── Tab configuration per role ───────────────────────────────
 type TabId = "action" | "all" | "processing" | "approved" | "changes" | "issued";
@@ -80,9 +75,11 @@ function getTabsForRole(role: Role): TabConfig[] {
   ];
 }
 
-export default function CircularsListPage({
-  user, circulars, onSelectCircular, onNavigate, onUpdateCircular,
-}: Props) {
+export default function CircularsListPage() {
+  const { currentUser: user, circulars, updateCircular } = useAppContext();
+  const router = useRouter();
+
+  if (!user) return null;
   const tabs = getTabsForRole(user.role);
   const [activeTab, setActiveTab] = useState<TabId>(tabs[0].id);
   const [search, setSearch] = useState("");
@@ -131,7 +128,7 @@ export default function CircularsListPage({
         </div>
         {canCreate && (
           <button
-            onClick={() => onNavigate("create")}
+            onClick={() => router.push("/circulars/create")}
             className="flex items-center gap-2 bg-[#1a3567] hover:bg-[#152d58] active:scale-[0.98] text-white text-sm font-medium px-4 py-2.5 rounded-xl transition-all shadow-sm hover:shadow-md"
           >
             <Plus size={15} /> New Circular
@@ -158,7 +155,7 @@ export default function CircularsListPage({
                   </p>
                 </div>
                 <button
-                  onClick={() => onSelectCircular(c.id)}
+                  onClick={() => router.push(`/circulars/${c.id}`)}
                   className="ml-3 text-xs font-medium text-orange-700 hover:text-orange-900 border border-orange-200 hover:border-orange-300 px-3 py-1.5 rounded-lg transition-colors whitespace-nowrap"
                 >
                   Revise
@@ -290,7 +287,7 @@ export default function CircularsListPage({
                         </button>
                         {/* Navigate to detail */}
                         <button
-                          onClick={() => onSelectCircular(c.id)}
+                          onClick={() => router.push(`/circulars/${c.id}`)}
                           className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-[#eaecf5] text-[#c8d0e8] hover:text-[#1a3567] transition-colors"
                           title="View details"
                         >
@@ -322,7 +319,7 @@ export default function CircularsListPage({
           circular={modalCircular}
           user={user}
           onClose={() => setModalCircular(null)}
-          onUpdateCircular={updated => { onUpdateCircular(updated); }}
+          onUpdateCircular={updated => { updateCircular(updated); }}
         />
       )}
     </div>

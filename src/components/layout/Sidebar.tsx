@@ -3,13 +3,13 @@ import {
   LogOut, ChevronLeft, ChevronRight, CalendarDays,
   Shield, Building2, Users, Star,
 } from "lucide-react";
-import type { User, Circular, Page, Role } from "../../lib/types";
+import type { User, Circular, Role } from "../../lib/types";
 import { canAct, visibleTo } from "../../lib/helpers";
 import { COLLEGE_SHORT } from "../../lib/data";
 import kiotLogo from "../../imports/images.png";
 
 interface NavItem {
-  id: Page;
+  id: string;
   label: string;
   icon: React.ReactNode;
   badge?: number;
@@ -17,12 +17,7 @@ interface NavItem {
 }
 
 interface Props {
-  user: User;
-  page: Page;
-  circulars: Circular[];
   collapsed: boolean;
-  onNavigate: (p: Page) => void;
-  onLogout: () => void;
   onToggle: () => void;
 }
 
@@ -46,50 +41,58 @@ function buildNavItems(user: User, circulars: Circular[]): NavItem[] {
   switch (user.role) {
     case "staff":
       return [
-        { id: "dashboard",     label: "Dashboard",     icon: <LayoutDashboard size={17} />, section: "OVERVIEW" },
-        { id: "circulars",     label: "My Circulars",  icon: <FileText size={17} />,        section: "CIRCULARS" },
-        { id: "create",        label: "New Circular",  icon: <Plus size={17} /> },
-        { id: "notifications", label: "Notifications", icon: <Bell size={17} />,             badge: changesCount },
+        { id: "/dashboard",     label: "Dashboard",     icon: <LayoutDashboard size={17} />, section: "OVERVIEW" },
+        { id: "/circulars",     label: "My Circulars",  icon: <FileText size={17} />,        section: "CIRCULARS" },
+        { id: "/circulars/create", label: "New Circular",  icon: <Plus size={17} /> },
+        { id: "/notifications", label: "Notifications", icon: <Bell size={17} />,             badge: changesCount },
       ];
     case "hod":
       return [
-        { id: "dashboard",     label: "Dashboard",       icon: <LayoutDashboard size={17} />, section: "OVERVIEW" },
-        { id: "circulars",     label: "Review Circulars",icon: <FileText size={17} />,         badge: actionCount, section: "CIRCULARS" },
-        { id: "create",        label: "New Circular",    icon: <Plus size={17} /> },
-        { id: "notifications", label: "Notifications",   icon: <Bell size={17} /> },
+        { id: "/dashboard",     label: "Dashboard",       icon: <LayoutDashboard size={17} />, section: "OVERVIEW" },
+        { id: "/circulars",     label: "Review Circulars",icon: <FileText size={17} />,         badge: actionCount, section: "CIRCULARS" },
+        { id: "/circulars/create", label: "New Circular",    icon: <Plus size={17} /> },
+        { id: "/notifications", label: "Notifications",   icon: <Bell size={17} /> },
       ];
     case "principal":
       return [
-        { id: "dashboard",     label: "Dashboard",       icon: <LayoutDashboard size={17} />, section: "OVERVIEW" },
-        { id: "circulars",     label: "Pending Approvals",icon: <FileText size={17} />,        badge: actionCount, section: "APPROVALS" },
-        { id: "notifications", label: "Notifications",   icon: <Bell size={17} /> },
+        { id: "/dashboard",     label: "Dashboard",       icon: <LayoutDashboard size={17} />, section: "OVERVIEW" },
+        { id: "/circulars",     label: "Pending Approvals",icon: <FileText size={17} />,        badge: actionCount, section: "APPROVALS" },
+        { id: "/notifications", label: "Notifications",   icon: <Bell size={17} /> },
       ];
     case "placement_coordinator":
       return [
-        { id: "dashboard",     label: "Dashboard",         icon: <LayoutDashboard size={17} />, section: "OVERVIEW" },
-        { id: "circulars",     label: "Placement Circulars",icon: <Briefcase size={17} />,       section: "CIRCULARS" },
-        { id: "create",        label: "New Circular",      icon: <Plus size={17} /> },
-        { id: "notifications", label: "Notifications",     icon: <Bell size={17} /> },
+        { id: "/dashboard",     label: "Dashboard",         icon: <LayoutDashboard size={17} />, section: "OVERVIEW" },
+        { id: "/circulars",     label: "Placement Circulars",icon: <Briefcase size={17} />,       section: "CIRCULARS" },
+        { id: "/circulars/create", label: "New Circular",      icon: <Plus size={17} /> },
+        { id: "/notifications", label: "Notifications",     icon: <Bell size={17} /> },
       ];
     case "placement_director":
       return [
-        { id: "dashboard",     label: "Dashboard",         icon: <LayoutDashboard size={17} />, section: "OVERVIEW" },
-        { id: "circulars",     label: "Placement Approvals",icon: <Briefcase size={17} />,       badge: actionCount, section: "APPROVALS" },
-        { id: "notifications", label: "Notifications",     icon: <Bell size={17} /> },
+        { id: "/dashboard",     label: "Dashboard",         icon: <LayoutDashboard size={17} />, section: "OVERVIEW" },
+        { id: "/circulars",     label: "Placement Approvals",icon: <Briefcase size={17} />,       badge: actionCount, section: "APPROVALS" },
+        { id: "/notifications", label: "Notifications",     icon: <Bell size={17} /> },
       ];
     case "event_coordinator":
       return [
-        { id: "dashboard",     label: "Dashboard",       icon: <LayoutDashboard size={17} />, section: "OVERVIEW" },
-        { id: "circulars",     label: "Event Circulars", icon: <CalendarDays size={17} />,     badge: actionCount, section: "CIRCULARS" },
-        { id: "create",        label: "New Circular",    icon: <Plus size={17} /> },
-        { id: "notifications", label: "Notifications",   icon: <Bell size={17} /> },
+        { id: "/dashboard",     label: "Dashboard",       icon: <LayoutDashboard size={17} />, section: "OVERVIEW" },
+        { id: "/circulars",     label: "Event Circulars", icon: <CalendarDays size={17} />,     badge: actionCount, section: "CIRCULARS" },
+        { id: "/circulars/create", label: "New Circular",    icon: <Plus size={17} /> },
+        { id: "/notifications", label: "Notifications",   icon: <Bell size={17} /> },
       ];
     default:
       return [];
   }
 }
 
-export default function Sidebar({ user, page, circulars, collapsed, onNavigate, onLogout, onToggle }: Props) {
+import { useAppContext } from "../../lib/context/AppContext";
+import { useRouter, usePathname } from "next/navigation";
+
+export default function Sidebar({ collapsed, onToggle }: Props) {
+  const { currentUser: user, circulars, logout } = useAppContext();
+  const router = useRouter();
+  const pathname = usePathname();
+  
+  if (!user) return null;
   const navItems = buildNavItems(user, circulars);
   const meta = ROLE_META[user.role];
   const initials = user.name.split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase();
@@ -125,7 +128,7 @@ export default function Sidebar({ user, page, circulars, collapsed, onNavigate, 
             <div className="flex items-center gap-2.5 min-w-0">
               {/* Logo mark */}
               <div className="w-10 h-10 rounded-lg overflow-hidden shrink-0 shadow-md bg-white flex items-center justify-center p-0.5">
-                <img src={kiotLogo} alt="KIOT Logo" className="w-full h-full object-contain p-0.5" />
+                <img src={kiotLogo.src} alt="KIOT Logo" className="w-full h-full object-contain p-0.5" />
               </div>
               <div className="min-w-0">
                 <p className="text-white text-sm font-extrabold tracking-widest leading-tight">{COLLEGE_SHORT}</p>
@@ -139,7 +142,7 @@ export default function Sidebar({ user, page, circulars, collapsed, onNavigate, 
           {/* Collapsed logo */}
           {collapsed && (
             <div className="w-10 h-10 rounded-lg overflow-hidden bg-white flex items-center justify-center shadow-md p-0.5">
-              <img src={kiotLogo} alt="KIOT Logo" className="w-full h-full object-contain p-0.5" />
+              <img src={kiotLogo.src} alt="KIOT Logo" className="w-full h-full object-contain p-0.5" />
             </div>
           )}
 
@@ -168,11 +171,11 @@ export default function Sidebar({ user, page, circulars, collapsed, onNavigate, 
               {section.heading && collapsed && <div className="my-1 border-t border-white/8 mx-2" />}
 
               {section.items.map(item => {
-                const active = page === item.id;
+                const active = pathname === item.id || (item.id === "/circulars" && pathname?.startsWith("/circulars") && pathname !== "/circulars/create");
                 return (
                   <button
                     key={item.id}
-                    onClick={() => onNavigate(item.id)}
+                    onClick={() => router.push(item.id)}
                     title={collapsed ? item.label : undefined}
                     className={`nav-hover w-full flex items-center rounded-xl text-sm font-medium transition-all duration-150 relative group
                       ${collapsed ? "justify-center p-2.5" : "gap-3 px-3 py-2.5"}
@@ -237,7 +240,7 @@ export default function Sidebar({ user, page, circulars, collapsed, onNavigate, 
                 {initials}
               </div>
               <button
-                onClick={onLogout}
+                onClick={logout}
                 title="Sign Out"
                 className="w-9 h-8 flex items-center justify-center rounded-lg text-white/30 hover:text-red-400 hover:bg-red-500/10 transition-all"
               >
@@ -267,7 +270,7 @@ export default function Sidebar({ user, page, circulars, collapsed, onNavigate, 
 
               {/* Logout */}
               <button
-                onClick={onLogout}
+                onClick={logout}
                 title="Sign Out"
                 className="w-8 h-8 flex items-center justify-center rounded-lg text-white/25 hover:text-red-400 hover:bg-red-500/10 transition-all shrink-0"
               >
