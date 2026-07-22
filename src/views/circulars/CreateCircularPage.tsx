@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Send, FileDown, FileText, Loader2, ChevronRight, UserCheck } from "lucide-react";
 import type { User, Circular, CircularType, Dept, Role, ActivityComment } from "../../lib/types";
 import { initStatus } from "../../lib/helpers";
@@ -7,7 +7,7 @@ import RichTextEditor from "../../components/shared/RichTextEditor";
 import { downloadDocx, stripHtml, DIST_DEPTS, resolveCheckedDepts } from "../../lib/docGenerator";
 
 import { useAppContext } from "../../lib/context/AppContext";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 
 const ALL_DEPTS: Dept[] = [
   "CSE",
@@ -50,8 +50,10 @@ const LABEL_CLS = "block text-[11px] font-bold text-[#0f1c3f] mb-1.5 uppercase t
 const INPUT_CLS = "w-full px-3.5 py-2.5 rounded-xl border border-[#d0d8ee] bg-[#f8faff] text-sm text-[#0f1c3f] placeholder:text-[#b0b9d4] focus:outline-none focus:ring-2 focus:ring-[#1a3567]/20 focus:border-[#1a3567] transition-all";
 
 export default function CreateCircularPage() {
-  const { currentUser: user, createCircular } = useAppContext();
+  const { currentUser: user, createCircular, circulars, updateCircular } = useAppContext();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const editId = searchParams?.get("edit");
 
   if (!user) return null;
   const [title,        setTitle]        = useState("");
@@ -63,6 +65,22 @@ export default function CreateCircularPage() {
   const [targetUsers,  setTargetUsers]  = useState<string[]>([]);
   const [selectedApprovers, setSelectedApprovers] = useState<Role[]>(["hod", "principal"]);
   const [submitting,   setSubmitting]   = useState(false);
+
+  useEffect(() => {
+    if (editId) {
+      const existing = circulars.find(c => c.id === editId);
+      if (existing) {
+        setTitle(existing.title);
+        setType(existing.type);
+        setSubject(existing.subject);
+        setContentHtml(existing.contentHtml || `<p>${existing.content}</p>`);
+        setPriority(existing.priority);
+        setTargetDepts(existing.targetDepts);
+        setTargetUsers(existing.targetUsers || []);
+        setSelectedApprovers(existing.approvalFlow);
+      }
+    }
+  }, [editId, circulars]);
 
   const isPlacement = user.role === "placement_coordinator" || user.role === "placement_director";
   const availableTypes = isPlacement
@@ -95,6 +113,40 @@ export default function CreateCircularPage() {
     setSubmitting(true);
 
     const now = new Date().toISOString();
+
+    if (editId) {
+      const existing = circulars.find(c => c.id === editId);
+      if (existing) {
+        const updateComment: ActivityComment = {
+          id: `cm-${Date.now()}`,
+          authorId: user!.id,
+          authorName: user!.name,
+          designation: user!.designation,
+          message: "Circular revised and resubmitted for approval.",
+          timestamp: now,
+          type: "resubmitted",
+        };
+        const updatedCircular: Circular = {
+          ...existing,
+          title: title.trim(),
+          type,
+          subject: subject.trim(),
+          content: plainContent,
+          contentHtml,
+          priority,
+          targetDepts: targetDepts.length > 0 ? targetDepts : [user!.department as Dept],
+          targetUsers,
+          approvalFlow,
+          status: initStatus(type, user!.role, approvalFlow),
+          comments: [...existing.comments, updateComment]
+        };
+        updateCircular(updatedCircular);
+        setSubmitting(false);
+        router.push(`/circulars/${existing.id}`);
+        return;
+      }
+    }
+
     const deptCode = user!.department.split(" ").map(w => w[0]).join("").toUpperCase();
     const year = new Date().getFullYear();
     const seq = String(Math.floor(Math.random() * 900) + 100);

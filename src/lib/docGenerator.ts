@@ -84,7 +84,7 @@ export function htmlToDocxParagraphs(html: string): Paragraph[] {
       paras.push(new Paragraph({
         alignment,
         children: parseInlineRuns(inner),
-        spacing: { after: 100 },
+        spacing: { after: 120, line: 276 }, // 1.15 line spacing (240 is single, 276 is 1.15)
       }));
     }
   }
@@ -92,7 +92,7 @@ export function htmlToDocxParagraphs(html: string): Paragraph[] {
   if (!paras.length) {
     const plain = stripHtml(html);
     for (const line of plain.split("\n")) {
-      paras.push(new Paragraph({ children: [new TextRun({ text: line, size: 22 })], spacing: { after: 80 } }));
+      paras.push(new Paragraph({ children: [new TextRun({ text: line, size: 22 })], spacing: { after: 100, line: 276 } }));
     }
   }
 

@@ -303,9 +303,9 @@ export default function CircularDetailPage({ circular: c }: Props) {
                     <p className="text-xs text-[#5a6483] mb-3">
                       Changes have been requested. Review the comments, make revisions, then resubmit.
                     </p>
-                    <button onClick={handleResubmit}
+                    <button onClick={() => router.push(`/circulars/create?edit=${c.id}`)}
                       className="flex items-center gap-2 bg-[#1a3567] hover:bg-[#152d58] text-white text-sm font-medium px-4 py-2 rounded-lg transition-all shadow-sm">
-                      <Send size={14} /> Resubmit Circular
+                      <PenLine size={14} /> Edit & Resubmit Circular
                     </button>
                   </div>
                 )}
