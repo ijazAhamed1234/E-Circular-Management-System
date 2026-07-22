@@ -9,17 +9,6 @@ import kiotLogo from "../../imports/images.png";
 
 import { useAppContext } from "../../lib/context/AppContext";
 
-function GoogleIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 48 48">
-      <path fill="#EA4335" d="M24 9.5c3.4 0 6.4 1.17 8.8 3.46l6.5-6.5C35.4 2.5 30.1 0 24 0 14.6 0 6.5 5.4 2.5 13.2l7.6 5.9C11.9 13.1 17.4 9.5 24 9.5z" />
-      <path fill="#4285F4" d="M46.5 24.5c0-1.6-.15-3.1-.4-4.6H24v9.1h12.7c-.55 2.9-2.2 5.4-4.7 7l7.4 5.7C43.9 37.4 46.5 31.5 46.5 24.5z" />
-      <path fill="#FBBC05" d="M10.1 19.1c-.5 1.4-.75 2.9-.75 4.4s.25 3 .75 4.4l-7.6 5.9C.9 30.9 0 27.5 0 23.5s.9-7.4 2.5-10.3l7.6 5.9z" />
-      <path fill="#34A853" d="M24 47c6.1 0 11.3-2 15-5.5l-7.4-5.7c-2.1 1.4-4.7 2.2-7.6 2.2-6.6 0-12.1-4.5-14-10.5l-7.6 5.9C6.5 41.6 14.6 47 24 47z" />
-    </svg>
-  );
-}
-
 const ROLE_CHIP: Record<Role, { cls: string; icon: React.ReactNode; label: string }> = {
   staff: { cls: "bg-blue-50 text-blue-700 border-blue-200", icon: <Users size={10} />, label: "Faculty" },
   hod: { cls: "bg-purple-50 text-purple-700 border-purple-200", icon: <Building2 size={10} />, label: "HOD" },
@@ -244,18 +233,6 @@ export default function LoginPage() {
               </button>
             </form>
 
-            {/* Divider */}
-            <div className="flex items-center gap-3 my-4">
-              <span className="h-px flex-1 bg-[#eaecf5]" />
-              <span className="text-[10px] text-[#a8b3d0] uppercase tracking-widest">or</span>
-              <span className="h-px flex-1 bg-[#eaecf5]" />
-            </div>
-
-            {/* Google button */}
-            <button className="w-full flex items-center justify-center gap-2.5 rounded-full border border-[#e2e7f0] py-2.5 text-sm text-[#1a2340] hover:bg-[#f4f6fc] transition-colors font-medium">
-              <GoogleIcon />
-              Sign in with Google Workspace
-            </button>
           </div>
 
           {/* Demo accounts */}

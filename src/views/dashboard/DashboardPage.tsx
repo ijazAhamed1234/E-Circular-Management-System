@@ -74,7 +74,7 @@ export default function DashboardPage() {
           { label: "Approved", value: stats.approved, icon: <CheckCircle size={18} />, color: "text-emerald-600", bg: "bg-emerald-50" },
           { label: "Changes Requested", value: stats.changes, icon: <AlertCircle size={18} />, color: "text-orange-600", bg: "bg-orange-50" },
         ].map(s => (
-          <div key={s.label} className="bg-white rounded-xl p-4 border border-[#eaecf5] hover:shadow-md transition-shadow">
+          <div key={s.label} className="bg-white rounded-2xl p-4 border border-[#eaecf5] shadow-sm hover:shadow-md transition-all">
             <div className="flex items-start justify-between mb-3">
               <p className="text-xs font-medium text-[#5a6483] leading-tight">{s.label}</p>
               <span className={`p-1.5 rounded-lg ${s.bg} ${s.color}`}>{s.icon}</span>
@@ -87,7 +87,7 @@ export default function DashboardPage() {
       <div className="grid lg:grid-cols-3 gap-5">
         {/* Action required */}
         {actionItems.length > 0 && (
-          <div className="bg-white rounded-xl border border-[#eaecf5] overflow-hidden">
+          <div className="bg-white rounded-2xl border border-[#eaecf5] overflow-hidden shadow-sm hover:shadow-md transition-shadow">
             <div className="px-5 py-3.5 border-b border-[#eaecf5] flex items-center justify-between">
               <h3 className="text-sm font-semibold text-[#0f1c3f] flex items-center gap-2">
                 <Inbox size={15} className="text-amber-500" /> Action Required
@@ -119,7 +119,7 @@ export default function DashboardPage() {
 
         {/* Changes requested */}
         {changesItems.length > 0 && (
-          <div className="bg-white rounded-xl border border-[#eaecf5] overflow-hidden">
+          <div className="bg-white rounded-2xl border border-[#eaecf5] overflow-hidden shadow-sm hover:shadow-md transition-shadow">
             <div className="px-5 py-3.5 border-b border-[#eaecf5]">
               <h3 className="text-sm font-semibold text-[#0f1c3f] flex items-center gap-2">
                 <RotateCcw size={15} className="text-orange-500" /> Changes Requested
@@ -144,7 +144,7 @@ export default function DashboardPage() {
         )}
 
         {/* Recent circulars */}
-        <div className={`${actionItems.length > 0 || changesItems.length > 0 ? "lg:col-span-2" : "lg:col-span-3"} bg-white rounded-xl border border-[#eaecf5] overflow-hidden`}>
+        <div className={`${actionItems.length > 0 || changesItems.length > 0 ? "lg:col-span-2" : "lg:col-span-3"} bg-white rounded-2xl border border-[#eaecf5] overflow-hidden shadow-sm hover:shadow-md transition-shadow`}>
           <div className="px-5 py-3.5 border-b border-[#eaecf5] flex items-center justify-between">
             <h3 className="text-sm font-semibold text-[#0f1c3f] flex items-center gap-2">
               <TrendingUp size={15} className="text-[#1a3567]" /> Recent Circulars

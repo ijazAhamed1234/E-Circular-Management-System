@@ -200,7 +200,7 @@ export default function CircularDetailPage({ circular: c }: Props) {
             ) : (
               <div className={`grid gap-6 ${c.signatures.length > 1 ? "grid-cols-2" : "grid-cols-1 max-w-xs"}`}>
                 {c.signatures.map(sig => (
-                  <div key={sig.userId} className="border border-[#eaecf5] rounded-xl p-4 text-center relative overflow-hidden">
+                  <div key={sig.userId} className="border border-[#eaecf5] rounded-2xl p-4 text-center relative overflow-hidden shadow-sm hover:shadow transition-shadow">
                     {c.status === "approved" && (
                       <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                         <ApprovedStamp />
@@ -230,7 +230,7 @@ export default function CircularDetailPage({ circular: c }: Props) {
           {/* Main column */}
           <div className="lg:col-span-2 space-y-5">
             {/* Header card */}
-            <div className="bg-white rounded-xl border border-[#eaecf5] p-6">
+            <div className="bg-white rounded-2xl border border-[#eaecf5] p-6 shadow-sm">
               <div className="flex items-center gap-2 flex-wrap mb-3">
                 <span className={`px-2 py-0.5 rounded text-xs font-medium ${typeCls(c.type)}`}>{typeLabel(c.type)}</span>
                 <span className={`px-2 py-0.5 rounded text-xs font-medium ${priorityCls(c.priority)}`}>{priorityLabel(c.priority)}</span>
@@ -273,14 +273,14 @@ export default function CircularDetailPage({ circular: c }: Props) {
             </div>
 
             {/* Content */}
-            <div className="bg-white rounded-xl border border-[#eaecf5] p-6">
+            <div className="bg-white rounded-2xl border border-[#eaecf5] overflow-hidden shadow-sm">
               <h3 className="text-xs font-semibold text-[#9aa3bf] uppercase tracking-wider mb-3">Circular Content</h3>
               <div className="text-sm text-[#0f1c3f] leading-relaxed whitespace-pre-line">{c.content}</div>
             </div>
 
             {/* Action area */}
             {(userCanAct || (isCreator && c.status === "changes_requested")) && !showAction && (
-              <div className="bg-white rounded-xl border border-[#eaecf5] p-5">
+              <div className="bg-white rounded-2xl border border-[#eaecf5] p-5 shadow-sm">
                 <h3 className="text-sm font-semibold text-[#0f1c3f] mb-3">Your Action</h3>
                 {userCanAct && (
                   <div className="flex items-center gap-2 flex-wrap">
@@ -314,7 +314,7 @@ export default function CircularDetailPage({ circular: c }: Props) {
 
             {/* Action form */}
             {showAction && (
-              <div className="bg-white rounded-xl border border-[#eaecf5] p-5">
+              <div className="bg-white rounded-2xl border border-[#eaecf5] p-5 shadow-sm">
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="text-sm font-semibold text-[#0f1c3f]">
                     {actionType === "approve" ? "Approve & Apply Digital Signature" : actionType === "changes" ? "Request Changes" : "Reject Circular"}
@@ -387,7 +387,7 @@ export default function CircularDetailPage({ circular: c }: Props) {
           {/* Right column */}
           <div className="space-y-5">
             {/* Workflow steps */}
-            <div className="bg-white rounded-xl border border-[#eaecf5] p-5">
+            <div className="bg-white rounded-2xl border border-[#eaecf5] p-5 shadow-sm">
               <h3 className="text-xs font-semibold text-[#9aa3bf] uppercase tracking-wider mb-4">Approval Workflow</h3>
               <div className="space-y-0">
                 {steps.map((step, i) => (
@@ -431,7 +431,7 @@ export default function CircularDetailPage({ circular: c }: Props) {
             </div>
 
             {/* Applied signatures */}
-            <div className="bg-white rounded-xl border border-[#eaecf5] p-5">
+            <div className="bg-white rounded-2xl border border-[#eaecf5] p-5 shadow-sm">
               <h3 className="text-xs font-semibold text-[#9aa3bf] uppercase tracking-wider mb-3">Digital Signatures</h3>
               {c.signatures.length === 0 ? (
                 <p className="text-xs text-[#9aa3bf] italic">No signatures applied yet</p>
@@ -454,7 +454,7 @@ export default function CircularDetailPage({ circular: c }: Props) {
             </div>
 
             {/* Activity timeline */}
-            <div className="bg-white rounded-xl border border-[#eaecf5] p-5">
+            <div className="bg-white rounded-2xl border border-[#eaecf5] p-5 shadow-sm">
               <h3 className="text-xs font-semibold text-[#9aa3bf] uppercase tracking-wider mb-3">Activity Timeline</h3>
               <div className="space-y-3">
                 {[...c.comments].reverse().map(cm => (

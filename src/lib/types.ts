@@ -7,11 +7,14 @@ export type Role =
   | "event_coordinator";
 
 export type Dept =
-  | "Computer Science"
-  | "Information Technology"
-  | "Electronics & Communication"
-  | "Mechanical Engineering"
-  | "Civil Engineering"
+  | "CSE"
+  | "ECE"
+  | "IT"
+  | "AIDS"
+  | "ECX"
+  | "EEE"
+  | "MECH"
+  | "CIVIL"
   | "Administration"
   | "Placement Cell";
 
@@ -84,6 +87,7 @@ export interface Circular {
   type: CircularType;
   department: Dept;
   targetDepts: Dept[];
+  targetUsers?: string[];
   subject: string;
   content: string;
   contentHtml?: string;

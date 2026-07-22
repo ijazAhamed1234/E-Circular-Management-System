@@ -138,7 +138,7 @@ export default function CircularsListPage() {
 
       {/* ── Changes-requested banner (creator roles) ── */}
       {changesItems.length > 0 && (
-        <div className="bg-orange-50 border border-orange-200 rounded-xl p-4">
+        <div className="bg-orange-50 border border-orange-200 rounded-2xl p-4 shadow-sm hover:shadow-md transition-shadow">
           <div className="flex items-center gap-2 mb-3">
             <AlertTriangle size={16} className="text-orange-500 shrink-0" />
             <p className="text-sm font-semibold text-orange-800">
@@ -167,7 +167,7 @@ export default function CircularsListPage() {
       )}
 
       {/* ── Main card ── */}
-      <div className="bg-white rounded-xl border border-[#eaecf5] overflow-hidden shadow-sm">
+      <div className="bg-white rounded-2xl border border-[#eaecf5] overflow-hidden shadow-sm hover:shadow-md transition-shadow">
 
         {/* Search */}
         <div className="px-4 pt-4 pb-3">

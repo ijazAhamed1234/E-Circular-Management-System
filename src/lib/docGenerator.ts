@@ -208,8 +208,13 @@ function buildSigTable(slots: SigSlot[]): Table {
         ...(slot.signed ? [
           new Paragraph({
             alignment: AlignmentType.CENTER,
-            children: [new TextRun({ text: slot.name, bold: true, size: 19, color: "0f1c3f" })],
-            spacing: { after: 40 },
+            children: [new TextRun({ text: slot.name, size: 28, color: "0f1c3f", font: "Brush Script MT" })],
+            spacing: { after: 10 },
+          }),
+          new Paragraph({
+            alignment: AlignmentType.CENTER,
+            children: [new TextRun({ text: `(${slot.name})`, bold: true, size: 16, color: "0f1c3f" })],
+            spacing: { after: 30 },
           }),
           new Paragraph({
             alignment: AlignmentType.CENTER,
@@ -318,18 +323,20 @@ function footerVerifyTable(): Table {
 // All KIOT departments that appear in the circular distribution row
 export const DIST_DEPTS: { abbr: string; full: string }[] = [
   { abbr: "VP",    full: "Vice Principal" },
-  { abbr: "MECH",  full: "Mechanical Engineering" },
-  { abbr: "ECE",   full: "Electronics & Communication" },
-  { abbr: "EEE",   full: "EEE" },
   { abbr: "CSE",   full: "Computer Science" },
-  { abbr: "CIVIL", full: "Civil Engineering" },
+  { abbr: "ECE",   full: "Electronics & Communication" },
   { abbr: "IT",    full: "Information Technology" },
+  { abbr: "AIDS",  full: "Artificial Intelligence & Data Science" },
+  { abbr: "ECX",   full: "ECX" },
+  { abbr: "EEE",   full: "EEE" },
+  { abbr: "MECH",  full: "Mechanical Engineering" },
+  { abbr: "CIVIL", full: "Civil Engineering" },
   { abbr: "MBA",   full: "MBA" },
   { abbr: "IQAC",  full: "IQAC" },
   { abbr: "LIB",   full: "Library" },
   { abbr: "EMS",   full: "EMS" },
   { abbr: "FAT",   full: "FAT" },
-  { abbr: "CDT",   full: "CDT" },
+  { abbr: "CDT",   full: "Placement Cell" },
   { abbr: "AO",    full: "Administrative Officer" },
   { abbr: "Transport", full: "Transport" },
   { abbr: "Warden", full: "Warden" },
@@ -352,13 +359,16 @@ export function resolveCheckedDepts(circular: Circular): Set<string> {
   }
 
   for (const dept of td) {
-    if (dept.includes("Computer Science"))       { checked.add("CSE"); }
-    if (dept.includes("Information Technology")) { checked.add("IT"); }
-    if (dept.includes("Electronics"))            { checked.add("ECE"); }
-    if (dept.includes("Mechanical"))             { checked.add("MECH"); }
-    if (dept.includes("Civil"))                  { checked.add("CIVIL"); }
-    if (dept.includes("Administration"))         { checked.add("AO"); checked.add("VP"); }
-    if (dept.includes("Placement"))              { checked.add("CDT"); }
+    if (dept.includes("CSE"))       { checked.add("CSE"); }
+    if (dept.includes("IT"))        { checked.add("IT"); }
+    if (dept.includes("ECE"))       { checked.add("ECE"); }
+    if (dept.includes("MECH"))      { checked.add("MECH"); }
+    if (dept.includes("CIVIL"))     { checked.add("CIVIL"); }
+    if (dept.includes("AIDS"))      { checked.add("AIDS"); }
+    if (dept.includes("ECX"))       { checked.add("ECX"); }
+    if (dept.includes("EEE"))       { checked.add("EEE"); }
+    if (dept.includes("Administration")) { checked.add("AO"); checked.add("VP"); }
+    if (dept.includes("Placement"))      { checked.add("CDT"); }
   }
   // Always include Principal for approval flow
   if (circular.approvalFlow?.includes("principal") || circular.type === "all_department") {
@@ -618,7 +628,7 @@ export async function downloadDocx(circular: Circular): Promise<void> {
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
-  a.download = `${circular.refNo.replace(/\//g, "-")}_${circular.title.replace(/[^a-zA-Z0-9]/g, "_").slice(0, 40)}.docx`;
+  a.download = `Circular - ${circular.title.replace(/[^a-zA-Z0-9]+/g, " ").trim()}.docx`;
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
@@ -782,10 +792,18 @@ export function downloadPdf(circular: Circular): void {
     const cx = ml + j * colW;
     const s = pdfSlots[j];
     if (s.signed) {
-      setStyle(7.5, black, true);
-      doc.text(s.name, cx + colW / 2, y + 14, { align: "center" });
+      doc.setFont("times", "italic");
+      doc.setTextColor(...navy);
+      doc.setFontSize(14);
+      doc.text(s.name, cx + colW / 2, y + 10, { align: "center" });
+
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(...black);
+      doc.setFontSize(7.5);
+      doc.text(`(${s.name})`, cx + colW / 2, y + 15, { align: "center" });
+
       setStyle(7, gray, false);
-      doc.text(s.desig, cx + colW / 2, y + 18, { align: "center" });
+      doc.text(s.desig, cx + colW / 2, y + 19, { align: "center" });
       if (s.dept) doc.text(s.dept, cx + colW / 2, y + 22, { align: "center" });
       setStyle(6.5, [160, 170, 190] as [number, number, number], false);
       doc.text(s.date, cx + colW / 2, y + 26, { align: "center" });
@@ -860,5 +878,5 @@ export function downloadPdf(circular: Circular): void {
   doc.text("1)  Principal Office", ml + 8, y + 4.5);
   doc.text("2)  Concerned Issuing Department", ml + 8, y + 9);
 
-  doc.save(`${circular.refNo.replace(/\//g, "-")}_${circular.title.replace(/[^a-zA-Z0-9]/g, "_").slice(0, 40)}.pdf`);
+  doc.save(`Circular - ${circular.title.replace(/[^a-zA-Z0-9]+/g, " ").trim()}.pdf`);
 }

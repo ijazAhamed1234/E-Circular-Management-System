@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Send, FileDown, FileText, Loader2, ChevronRight, UserCheck } from "lucide-react";
 import type { User, Circular, CircularType, Dept, Role, ActivityComment } from "../../lib/types";
 import { initStatus } from "../../lib/helpers";
+import { USERS } from "../../lib/data";
 import RichTextEditor from "../../components/shared/RichTextEditor";
 import { downloadDocx, stripHtml, DIST_DEPTS, resolveCheckedDepts } from "../../lib/docGenerator";
 
@@ -9,11 +10,14 @@ import { useAppContext } from "../../lib/context/AppContext";
 import { useRouter } from "next/navigation";
 
 const ALL_DEPTS: Dept[] = [
-  "Computer Science",
-  "Information Technology",
-  "Electronics & Communication",
-  "Mechanical Engineering",
-  "Civil Engineering",
+  "CSE",
+  "ECE",
+  "IT",
+  "AIDS",
+  "ECX",
+  "EEE",
+  "MECH",
+  "CIVIL",
 ];
 
 const TYPE_OPTIONS: { value: CircularType; label: string }[] = [
@@ -56,6 +60,7 @@ export default function CreateCircularPage() {
   const [contentHtml,  setContentHtml]  = useState("<p></p>");
   const [priority,     setPriority]     = useState<"normal" | "urgent" | "very_urgent">("normal");
   const [targetDepts,  setTargetDepts]  = useState<Dept[]>([]);
+  const [targetUsers,  setTargetUsers]  = useState<string[]>([]);
   const [selectedApprovers, setSelectedApprovers] = useState<Role[]>(["hod", "principal"]);
   const [submitting,   setSubmitting]   = useState(false);
 
@@ -75,9 +80,13 @@ export default function CreateCircularPage() {
     );
   }
 
-  function toggleDept(d: Dept) {
+  const toggleDept = (d: Dept) => {
     setTargetDepts(prev => prev.includes(d) ? prev.filter(x => x !== d) : [...prev, d]);
-  }
+  };
+
+  const toggleUser = (userId: string) => {
+    setTargetUsers(prev => prev.includes(userId) ? prev.filter(x => x !== userId) : [...prev, userId]);
+  };
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -108,6 +117,7 @@ export default function CreateCircularPage() {
       type,
       department: user!.department,
       targetDepts: targetDepts.length > 0 ? targetDepts : [user!.department as Dept],
+      targetUsers,
       subject: subject.trim(),
       content: plainContent,
       contentHtml,
@@ -152,7 +162,7 @@ export default function CreateCircularPage() {
 
           {/* Row 1 — Type + Priority */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="bg-white rounded-xl border border-[#eaecf5] p-4">
+            <div className="bg-white rounded-2xl border border-[#eaecf5] p-4 shadow-sm">
               <label className={LABEL_CLS}>Circular Type</label>
               <select
                 value={type}
@@ -164,7 +174,7 @@ export default function CreateCircularPage() {
               </select>
             </div>
 
-            <div className="bg-white rounded-xl border border-[#eaecf5] p-4">
+            <div className="bg-white rounded-2xl border border-[#eaecf5] p-4 shadow-sm">
               <label className={LABEL_CLS}>Priority</label>
               <div className="flex gap-2 flex-wrap">
                 {PRIORITY_OPTS.map(p => (
@@ -186,7 +196,7 @@ export default function CreateCircularPage() {
           </div>
 
           {/* ── Approver Picker ── */}
-          <div className="bg-white rounded-xl border border-[#eaecf5] p-4">
+          <div className="bg-white rounded-2xl border border-[#eaecf5] p-4 shadow-sm">
             <div className="flex items-center gap-2 mb-3">
               <UserCheck size={14} className="text-[#1a3567]" />
               <label className={LABEL_CLS + " mb-0"}>Who needs to sign this circular?</label>
@@ -264,7 +274,7 @@ export default function CreateCircularPage() {
           </div>
 
           {/* Title */}
-          <div className="bg-white rounded-xl border border-[#eaecf5] p-4">
+          <div className="bg-white rounded-2xl border border-[#eaecf5] p-4 shadow-sm">
             <label className={LABEL_CLS}>Circular Title <span className="text-red-400">*</span></label>
             <input
               value={title}
@@ -276,7 +286,7 @@ export default function CreateCircularPage() {
           </div>
 
           {/* Subject */}
-          <div className="bg-white rounded-xl border border-[#eaecf5] p-4">
+          <div className="bg-white rounded-2xl border border-[#eaecf5] p-4 shadow-sm">
             <label className={LABEL_CLS}>Subject Line <span className="text-red-400">*</span></label>
             <input
               value={subject}
@@ -288,7 +298,7 @@ export default function CreateCircularPage() {
           </div>
 
           {/* Target Departments */}
-          <div className="bg-white rounded-xl border border-[#eaecf5] p-4">
+          <div className="bg-white rounded-2xl border border-[#eaecf5] p-4 shadow-sm">
             <label className={LABEL_CLS}>Target Departments</label>
             <div className="flex flex-wrap gap-2">
               {ALL_DEPTS.map(d => (
@@ -306,7 +316,26 @@ export default function CreateCircularPage() {
                 </button>
               ))}
             </div>
-            <p className="text-[10px] text-[#b0b9d4] mt-2">Leave empty to default to your own department</p>
+            <p className="text-[10px] text-[#b0b9d4] mt-2 mb-4">Leave empty to default to your own department</p>
+
+            <label className={LABEL_CLS}>Target Individuals (Optional)</label>
+            <div className="flex flex-wrap gap-2">
+              {USERS.filter(u => u.id !== user.id).map(u => (
+                <button
+                  type="button"
+                  key={u.id}
+                  onClick={() => toggleUser(u.id)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-all ${
+                    targetUsers.includes(u.id)
+                      ? "bg-[#1a3567] text-white border-[#1a3567] shadow-sm"
+                      : "bg-[#f8faff] text-[#5a6483] border-[#dde3f0] hover:border-[#b0bcd8]"
+                  }`}
+                >
+                  {u.name} ({u.designation})
+                </button>
+              ))}
+            </div>
+            <p className="text-[10px] text-[#b0b9d4] mt-2">Specifically send to these individuals</p>
 
             {/* Live distribution preview */}
             {(() => {
@@ -341,7 +370,7 @@ export default function CreateCircularPage() {
           </div>
 
           {/* Rich Text Content */}
-          <div className="bg-white rounded-xl border border-[#eaecf5] p-4">
+          <div className="bg-white rounded-2xl border border-[#eaecf5] p-4 shadow-sm">
             <label className={LABEL_CLS}>
               Circular Content <span className="text-red-400">*</span>
               <span className="ml-2 text-[10px] text-[#b0b9d4] normal-case tracking-normal font-normal">
