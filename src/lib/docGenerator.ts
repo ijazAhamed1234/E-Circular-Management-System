@@ -1,5 +1,5 @@
 import {
-  Document, Packer, Paragraph, TextRun, HeadingLevel,
+  Document, Packer, Paragraph, TextRun, HeadingLevel, ImageRun,
   AlignmentType, BorderStyle, Table, TableRow, TableCell,
   WidthType, ShadingType,
 } from "docx";
@@ -7,6 +7,60 @@ import jsPDF from "jspdf";
 import type { Circular } from "./types";
 import { COLLEGE_NAME, COLLEGE_SHORT, COLLEGE_ADDRESS, COLLEGE_CONTACT, COLLEGE_AFFILIATION, USERS } from "./data";
 import { fmtDate } from "./helpers";
+
+// ── Signature Helpers ──────────────────────────────────────────────────────
+function generateSignaturePngUrl(userId: string): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const paths: Record<string, string[]> = {
+      u1: ["M10,30 Q16,10 23,26 Q30,40 38,18 Q46,6 54,22 Q62,36 70,16 Q76,6 84,24"],
+      u2: ["M8,28 C18,6 28,8 36,24 C44,40 52,10 62,22 C70,30 78,8 88,26", "M72,16 L76,22"],
+      u3: ["M10,24 C22,4 32,8 40,22 C48,36 56,10 66,20 C72,26 78,8 86,24", "M56,14 L60,20", "M78,6 L82,12"],
+      u4: ["M8,30 Q18,8 28,24 Q38,40 48,14 Q58,4 66,22 Q74,36 82,18 Q88,8 94,26"],
+      u5: ["M20,28 L23,34 L38,20 L26,38 L95,8"],
+      u6: ["M10,28 Q20,6 28,24 Q36,40 44,14 Q52,4 60,22 Q68,38 76,16 Q82,6 88,26"],
+      u7: ["M8,26 C18,4 28,8 36,24 C44,40 52,10 62,22 C70,32 78,6 86,24 C90,34 94,16 100,28"],
+      u8: ["M10,26 Q22,5 30,22 Q38,38 48,12 Q56,2 64,20 Q72,36 80,14 Q86,4 92,24"],
+    };
+    const strokePaths = paths[userId] || ["M10,25 Q35,10 60,25 Q85,40 110,22"];
+    
+    const canvas = document.createElement("canvas");
+    canvas.width = 260; // 130 * 2 for higher resolution
+    canvas.height = 88; // 44 * 2
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return reject(new Error("No 2D context"));
+    
+    ctx.scale(2, 2);
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+    
+    ctx.strokeStyle = "#1a3567";
+    ctx.lineWidth = 1.8;
+    strokePaths.forEach(d => {
+      const p = new Path2D(d);
+      ctx.stroke(p);
+    });
+    
+    ctx.beginPath();
+    ctx.moveTo(6, 38);
+    ctx.lineTo(124, 38);
+    ctx.strokeStyle = "#1a3567";
+    ctx.lineWidth = 0.6;
+    ctx.setLineDash([2, 2]);
+    ctx.stroke();
+    
+    resolve(canvas.toDataURL("image/png"));
+  });
+}
+
+function dataUrlToArrayBuffer(dataUrl: string): ArrayBuffer {
+  const binaryString = window.atob(dataUrl.split(",")[1]);
+  const len = binaryString.length;
+  const bytes = new Uint8Array(len);
+  for (let i = 0; i < len; i++) {
+    bytes[i] = binaryString.charCodeAt(i);
+  }
+  return bytes.buffer;
+}
 
 // ── HTML → plain text ──────────────────────────────────────────────────────
 export function stripHtml(html: string): string {
@@ -112,7 +166,7 @@ function allBordersNone() {
 }
 
 // ── Workflow approver slots per circular type ──────────────────────────────
-type SigSlot = { label: string; signed: boolean; name: string; desig: string; dept: string; date: string };
+type SigSlot = { label: string; signed: boolean; name: string; desig: string; dept: string; date: string; userId?: string };
 
 function buildAllSigSlots(circular: Circular): SigSlot[] {
   const creator = USERS.find(u => u.id === circular.createdById);
@@ -123,8 +177,9 @@ function buildAllSigSlots(circular: Circular): SigSlot[] {
     signed: true,
     name: circular.createdByName,
     desig: creator?.designation ?? "Faculty",
-    dept: circular.department,
+    dept: creator?.department ?? circular.department,
     date: fmtDate(circular.createdAt),
+    userId: circular.createdById,
   });
 
   const ROLE_LABEL_MAP: Record<string, string> = {
@@ -165,6 +220,7 @@ function buildAllSigSlots(circular: Circular): SigSlot[] {
         desig: sig.designation,
         dept: sig.department,
         date: fmtDate(sig.signedAt),
+        userId: sig.userId,
       });
     } else {
       slots.push({ label, signed: false, name: "", desig: "", dept: "", date: "" });
@@ -176,7 +232,7 @@ function buildAllSigSlots(circular: Circular): SigSlot[] {
 
 // ── Signature table (KIOT-style) ─────────────────────────────────────────
 // Header row: role labels in shaded cells | Content row: name/desig with signature line
-function buildSigTable(slots: SigSlot[]): Table {
+async function buildSigTable(slots: SigSlot[]): Promise<Table> {
   const count = slots.length;
   const pct = Math.floor(100 / count);
 
@@ -195,22 +251,42 @@ function buildSigTable(slots: SigSlot[]): Table {
   );
 
   // Content row — signature area
-  const contentCells = slots.map(slot =>
-    new TableCell({
+  const contentCells = await Promise.all(slots.map(async slot => {
+    let sigElement: Paragraph;
+    if (slot.signed && slot.userId) {
+      try {
+        const dataUrl = await generateSignaturePngUrl(slot.userId);
+        const arrayBuffer = dataUrlToArrayBuffer(dataUrl);
+        sigElement = new Paragraph({
+          alignment: AlignmentType.CENTER,
+          children: [
+            new ImageRun({
+              data: arrayBuffer,
+              transformation: { width: 130, height: 44 },
+              type: "png"
+            })
+          ],
+          spacing: { after: 20 }
+        });
+      } catch (e) {
+        sigElement = new Paragraph({
+          alignment: AlignmentType.CENTER,
+          children: [new TextRun({ text: slot.name, size: 28, color: "0f1c3f", font: "Brush Script MT" })],
+          spacing: { after: 10 },
+        });
+      }
+    } else {
+      sigElement = new Paragraph({ children: [], spacing: { after: 120 } });
+    }
+
+    return new TableCell({
       width: { size: pct, type: WidthType.PERCENTAGE },
       borders: allBordersThin(),
       margins: { top: 120, bottom: 120, left: 120, right: 120 },
       children: [
-        // Blank signature space
-        new Paragraph({ children: [], spacing: { after: 200 } }),
-        new Paragraph({ children: [], spacing: { after: 80 } }),
-        // Name / desig line
+        new Paragraph({ children: [], spacing: { after: 100 } }),
+        sigElement,
         ...(slot.signed ? [
-          new Paragraph({
-            alignment: AlignmentType.CENTER,
-            children: [new TextRun({ text: slot.name, size: 28, color: "0f1c3f", font: "Brush Script MT" })],
-            spacing: { after: 10 },
-          }),
           new Paragraph({
             alignment: AlignmentType.CENTER,
             children: [new TextRun({ text: `(${slot.name})`, bold: true, size: 16, color: "0f1c3f" })],
@@ -244,8 +320,8 @@ function buildSigTable(slots: SigSlot[]): Table {
           }),
         ]),
       ],
-    })
-  );
+    });
+  }));
 
   return new Table({
     width: { size: 100, type: WidthType.PERCENTAGE },
@@ -589,7 +665,7 @@ export async function downloadDocx(circular: Circular): Promise<void> {
         new Paragraph({ children: [], spacing: { after: 120 } }),
 
         // ── Signature table ────────────────────────────────────────────
-        buildSigTable(allSlots),
+        await buildSigTable(allSlots),
 
         // ── Department distribution table ─────────────────────────────
         new Paragraph({ children: [], spacing: { after: 80 } }),
@@ -636,7 +712,7 @@ export async function downloadDocx(circular: Circular): Promise<void> {
 }
 
 // ── PDF download ───────────────────────────────────────────────────────────
-export function downloadPdf(circular: Circular): void {
+export async function downloadPdf(circular: Circular): Promise<void> {
   const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
   const W = 210, ml = 18, mr = 18, textW = W - ml - mr;
   let y = 15;
@@ -792,10 +868,22 @@ export function downloadPdf(circular: Circular): void {
     const cx = ml + j * colW;
     const s = pdfSlots[j];
     if (s.signed) {
-      doc.setFont("times", "italic");
-      doc.setTextColor(...navy);
-      doc.setFontSize(14);
-      doc.text(s.name, cx + colW / 2, y + 10, { align: "center" });
+      if (s.userId) {
+        try {
+          const dataUrl = await generateSignaturePngUrl(s.userId);
+          doc.addImage(dataUrl, 'PNG', cx + colW / 2 - 32.5, y + 2, 65, 22);
+        } catch (e) {
+          doc.setFont("times", "italic");
+          doc.setTextColor(...navy);
+          doc.setFontSize(14);
+          doc.text(s.name, cx + colW / 2, y + 10, { align: "center" });
+        }
+      } else {
+        doc.setFont("times", "italic");
+        doc.setTextColor(...navy);
+        doc.setFontSize(14);
+        doc.text(s.name, cx + colW / 2, y + 10, { align: "center" });
+      }
 
       doc.setFont("helvetica", "bold");
       doc.setTextColor(...black);
