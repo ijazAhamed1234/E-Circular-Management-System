@@ -27,15 +27,16 @@ interface SigBoxData {
 
 function buildSigBoxes(c: Circular, currentUser: User): SigBoxData[] {
   const sigByRole: Record<string, Sig> = {};
-  c.signatures.forEach(s => {
-    const u = USERS.find(u => u.id === s.userId);
-    if (u) sigByRole[u.role] = s;
+  (c.signatures || []).forEach(s => {
+    if (s.role) sigByRole[s.role] = s;
   });
 
   const creatorSig: Sig = {
+    id: "creator",
+    circularId: c.id,
     userId: c.createdById,
     userName: c.createdByName,
-    designation: c.createdByRole,
+    designation: c.createdByDesignation ?? c.createdByRole ?? "",
     department: c.department,
     signedAt: c.createdAt,
   };
@@ -50,10 +51,10 @@ function buildSigBoxes(c: Circular, currentUser: User): SigBoxData[] {
   });
 
   // Custom approval flow takes priority over type-based routing
-  if (c.approvalFlow && c.approvalFlow.length > 0) {
+  if (Array.isArray(c.approvalFlow) && c.approvalFlow.length > 0) {
     const LABEL: Partial<Record<Role, string>> = {
       hod: "HOD", principal: "Principal",
-      placement_director: "Placement Director", event_coordinator: "Event Coordinator",
+      placement_director: "Placement Director", training_coordinator: "Training Coordinator",
     };
     return [creator, ...c.approvalFlow.map(role => box(LABEL[role] ?? role, role))];
   }
@@ -61,7 +62,7 @@ function buildSigBoxes(c: Circular, currentUser: User): SigBoxData[] {
     return [creator, box("Placement Director", "placement_director"), box("Principal", "principal")];
   }
   if (c.type === "inter_department" || c.type === "event") {
-    return [creator, box("HOD", "hod"), box("Event Coordinator", "event_coordinator")];
+    return [creator, box("HOD", "hod"), box("Training Coordinator", "training_coordinator")];
   }
   if (c.type === "all_department" || c.type === "examination") {
     return [creator, box("Principal", "principal")];
@@ -80,68 +81,75 @@ export default function CircularDocumentModal({ circular: c, user, onClose, onUp
   const userCanAct = canAct(user, c);
   const sigBoxes = buildSigBoxes(c, user);
 
-  function handleApprove() {
+  async function handleApprove() {
     if (sigPhase !== "idle") return;
     setSigPhase("signing");
-    setTimeout(() => {
-      setSigPhase("signed");
-      const now = new Date().toISOString();
-      const newSig: Sig = {
-        userId: user.id,
-        userName: user.name,
-        designation: user.designation,
-        department: user.department,
-        signedAt: now,
-      };
-      const newComment: ActivityComment = {
-        id: `cm-${Date.now()}`,
-        authorId: user.id,
-        authorName: user.name,
-        designation: user.designation,
-        message: comment.trim() || "Approved and digitally signed.",
-        timestamp: now,
-        type: "approval",
-      };
-      onUpdateCircular({
-        ...c,
-        status: nextStatus(c),
-        signatures: [...c.signatures, newSig],
-        comments: [...c.comments, newComment],
+    try {
+      const res = await fetch(`/api/circulars/${c.id}/action`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: "approve", comment: comment.trim() || undefined })
       });
-      setTimeout(() => onClose(), 700);
-    }, 1400);
+      if (!res.ok) throw new Error("Failed to approve");
+      
+      setTimeout(async () => {
+        setSigPhase("signed");
+        const updatedRes = await fetch(`/api/circulars/${c.id}`);
+        if (updatedRes.ok) {
+          const updated = await updatedRes.json();
+          onUpdateCircular(updated);
+        }
+        setTimeout(() => onClose(), 700);
+      }, 1400);
+    } catch (error) {
+      console.error(error);
+      setSigPhase("idle");
+      alert("Failed to approve circular.");
+    }
   }
 
-  function handleChanges() {
+  async function handleChanges() {
     if (!comment.trim()) return;
-    const now = new Date().toISOString();
-    const newComment: ActivityComment = {
-      id: `cm-${Date.now()}`,
-      authorId: user.id,
-      authorName: user.name,
-      designation: user.designation,
-      message: comment.trim(),
-      timestamp: now,
-      type: "changes_requested",
-    };
-    onUpdateCircular({ ...c, status: "changes_requested", comments: [...c.comments, newComment] });
-    onClose();
+    try {
+      const res = await fetch(`/api/circulars/${c.id}/action`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: "changes_requested", comment: comment.trim() })
+      });
+      if (!res.ok) throw new Error("Failed to request changes");
+      
+      const updatedRes = await fetch(`/api/circulars/${c.id}`);
+      if (updatedRes.ok) {
+        const updated = await updatedRes.json();
+        onUpdateCircular(updated);
+      }
+      onClose();
+    } catch (error) {
+      console.error(error);
+      alert("Failed to request changes.");
+    }
   }
 
-  function handleReject() {
+  async function handleReject() {
     if (!comment.trim()) return;
-    const now = new Date().toISOString();
-    const newComment: ActivityComment = {
-      id: `cm-${Date.now()}`,
-      authorId: user.id,
-      authorName: user.name,
-      designation: user.designation,
-      message: comment.trim(),
-      timestamp: now,
-      type: "rejected",
-    };
-    onUpdateCircular({ ...c, status: "rejected", comments: [...c.comments, newComment] });
-    onClose();
+    try {
+      const res = await fetch(`/api/circulars/${c.id}/action`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: "reject", comment: comment.trim() })
+      });
+      if (!res.ok) throw new Error("Failed to reject");
+      
+      const updatedRes = await fetch(`/api/circulars/${c.id}`);
+      if (updatedRes.ok) {
+        const updated = await updatedRes.json();
+        onUpdateCircular(updated);
+      }
+      onClose();
+    } catch (error) {
+      console.error(error);
+      alert("Failed to reject circular.");
+    }
   }
 
   return (
@@ -175,9 +183,9 @@ export default function CircularDocumentModal({ circular: c, user, onClose, onUp
         </div>
 
         {/* Scrollable document */}
-        <div className="flex-1 overflow-y-auto px-8 py-6 bg-white">
-
-          {/* KIOT Letterhead */}
+        <div className="flex-1 overflow-y-auto bg-gray-100 p-4 sm:p-8">
+          <div className="bg-white mx-auto shadow-md" style={{ maxWidth: "210mm", minHeight: "297mm", padding: "20mm 20mm" }}>
+            {/* KIOT Letterhead */}
           <div className="border-b-2 border-[#1a3567] pb-3 mb-0">
             <div className="flex items-center gap-3">
               <div className="w-14 h-14 rounded-lg bg-white border border-[#e2e7f0] flex items-center justify-center p-0.5 overflow-hidden shrink-0">
@@ -230,7 +238,7 @@ export default function CircularDocumentModal({ circular: c, user, onClose, onUp
 
           {/* Fields table: To / Subject / Circular issued by */}
           {(() => {
-            const creatorUser = USERS.find(u => u.id === c.createdById);
+            const creatorUser = { name: c.createdByName, designation: c.createdByRole, department: c.department };
             const issuedBy = `${c.createdByName}${creatorUser?.designation ? `, ${creatorUser.designation}` : ""} – ${c.department}`;
             const fields = [
               { label: "To", value: c.targetDepts.map(d => `All Students & Faculty Members – ${d}`).join("; ") },
@@ -427,6 +435,7 @@ export default function CircularDocumentModal({ circular: c, user, onClose, onUp
               ))}
             </div>
           )}
+          </div>
         </div>
 
         {/* ── Footer action bar ── */}

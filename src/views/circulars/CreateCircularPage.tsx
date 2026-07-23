@@ -39,12 +39,12 @@ const PRIORITY_OPTS = [
 const APPROVER_OPTIONS: { role: Role; label: string; desc: string; color: string }[] = [
   { role: "hod",                label: "HOD",               desc: "Head of Department",         color: "#7c3aed" },
   { role: "placement_director", label: "Placement Director",desc: "Dept. of Placement",         color: "#db2777" },
-  { role: "event_coordinator",  label: "Event Coordinator", desc: "Events & Activities",        color: "#0891b2" },
+  { role: "training_coordinator",  label: "Training Coordinator", desc: "Training & Activities",        color: "#0891b2" },
   { role: "principal",          label: "Principal",         desc: "Principal's Office",         color: "#b45309" },
 ];
 
 // Fixed signing order — whoever is selected follows this hierarchy
-const SIGNING_ORDER: Role[] = ["hod", "placement_director", "event_coordinator", "principal"];
+const SIGNING_ORDER: Role[] = ["hod", "placement_director", "training_coordinator", "principal"];
 
 const LABEL_CLS = "block text-[11px] font-bold text-[#0f1c3f] mb-1.5 uppercase tracking-wider";
 const INPUT_CLS = "w-full px-3.5 py-2.5 rounded-xl border border-[#d0d8ee] bg-[#f8faff] text-sm text-[#0f1c3f] placeholder:text-[#b0b9d4] focus:outline-none focus:ring-2 focus:ring-[#1a3567]/20 focus:border-[#1a3567] transition-all";
@@ -60,10 +60,12 @@ export default function CreateCircularPage() {
   const [type,         setType]         = useState<CircularType>(user.role === "placement_coordinator" ? "placement" : "departmental");
   const [subject,      setSubject]      = useState("");
   const [contentHtml,  setContentHtml]  = useState("<p></p>");
+  const [margins,      setMargins]      = useState<"normal" | "narrow" | "wide">("normal");
   const [priority,     setPriority]     = useState<"normal" | "urgent" | "very_urgent">("normal");
   const [targetDepts,  setTargetDepts]  = useState<Dept[]>([]);
   const [targetUsers,  setTargetUsers]  = useState<string[]>([]);
   const [selectedApprovers, setSelectedApprovers] = useState<Role[]>(["hod", "principal"]);
+  const [file, setFile] = useState<File | null>(null);
   const [submitting,   setSubmitting]   = useState(false);
 
   useEffect(() => {
@@ -74,6 +76,7 @@ export default function CreateCircularPage() {
         setType(existing.type);
         setSubject(existing.subject);
         setContentHtml(existing.contentHtml || `<p>${existing.content}</p>`);
+        setMargins(existing.margins || "normal");
         setPriority(existing.priority);
         setTargetDepts(existing.targetDepts);
         setTargetUsers(existing.targetUsers || []);
@@ -112,83 +115,87 @@ export default function CreateCircularPage() {
     if (approvalFlow.length === 0) return;
     setSubmitting(true);
 
-    const now = new Date().toISOString();
+    try {
+      let uploadedUrl: string | null = null;
+      if (file) {
+        const formData = new FormData();
+        formData.append('file', file);
+        const uploadRes = await fetch('/api/upload', {
+          method: 'POST',
+          body: formData
+        });
+        if (uploadRes.ok) {
+          const uploadData = await uploadRes.json();
+          uploadedUrl = uploadData.url;
+        }
+      }
 
-    if (editId) {
-      const existing = circulars.find(c => c.id === editId);
-      if (existing) {
-        const updateComment: ActivityComment = {
-          id: `cm-${Date.now()}`,
-          authorId: user!.id,
-          authorName: user!.name,
-          designation: user!.designation,
-          message: "Circular revised and resubmitted for approval.",
-          timestamp: now,
-          type: "resubmitted",
-        };
-        const updatedCircular: Circular = {
-          ...existing,
-          title: title.trim(),
-          type,
-          subject: subject.trim(),
-          content: plainContent,
-          contentHtml,
-          priority,
-          targetDepts: targetDepts.length > 0 ? targetDepts : [user!.department as Dept],
-          targetUsers,
-          approvalFlow,
-          status: initStatus(type, user!.role, approvalFlow),
-          signatures: [],
-          comments: [...existing.comments, updateComment]
-        };
-        updateCircular(updatedCircular);
+      if (editId) {
+        const existing = circulars.find(c => c.id === editId);
+        if (existing) {
+          const res = await fetch(`/api/circulars/${existing.id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              title: title.trim(),
+              targetDepts: targetDepts.length > 0 ? targetDepts : [user!.department as Dept],
+              subject: subject.trim(),
+              content: plainContent,
+              contentHtml: contentHtml,
+              margins: margins,
+              priority,
+              attachments: uploadedUrl ? [uploadedUrl] : undefined,
+              approvalFlow
+            })
+          });
+
+          if (res.ok) {
+            const updatedRes = await fetch(`/api/circulars/${existing.id}`);
+            if (updatedRes.ok) {
+              const updatedData = await updatedRes.json();
+              updateCircular(updatedData);
+            }
+            router.push(`/circulars/${existing.id}`);
+          } else {
+            const errData = await res.json().catch(() => ({}));
+            alert(`Failed to update: ${errData.error || res.statusText}`);
+          }
+        }
         setSubmitting(false);
-        router.push(`/circulars/${existing.id}`);
         return;
       }
+
+      const res = await fetch('/api/circulars', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: title.trim(),
+          type,
+          targetDepts: targetDepts.length > 0 ? targetDepts : [user!.department as Dept],
+          subject: subject.trim(),
+          content: plainContent,
+          contentHtml: contentHtml,
+          margins: margins,
+          priority,
+          attachments: uploadedUrl ? [uploadedUrl] : undefined,
+          approvalFlow
+        })
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        await createCircular(data);
+        downloadDocx(data);
+      } else {
+        const errData = await res.json().catch(() => ({}));
+        alert(`Failed to submit: ${errData.error || res.statusText}`);
+        setSubmitting(false);
+      }
+    } catch (err) {
+      console.error('Submission error:', err);
+      alert('An unexpected error occurred. Please try again.');
+      setSubmitting(false);
     }
-
-    const deptCode = user!.department.split(" ").map(w => w[0]).join("").toUpperCase();
-    const year = new Date().getFullYear();
-    const seq = String(Math.floor(Math.random() * 900) + 100);
-    const refNo = `KIOT/${deptCode}/${year}-${String(year + 1).slice(-2)}/${seq}`;
-
-    const firstComment: ActivityComment = {
-      id: `cm-${Date.now()}`,
-      authorId: user!.id,
-      authorName: user!.name,
-      designation: user!.designation,
-      message: "Circular submitted for approval.",
-      timestamp: now,
-      type: "submitted",
-    };
-
-    const newCircular: Circular = {
-      id: `c-${Date.now()}`,
-      refNo,
-      title: title.trim(),
-      type,
-      department: user!.department,
-      targetDepts: targetDepts.length > 0 ? targetDepts : [user!.department as Dept],
-      targetUsers,
-      subject: subject.trim(),
-      content: plainContent,
-      contentHtml,
-      approvalFlow,
-      createdById: user!.id,
-      createdByName: user!.name,
-      createdByRole: user!.role,
-      createdAt: now,
-      status: initStatus(type, user!.role, approvalFlow),
-      priority,
-      signatures: [],
-      comments: [firstComment],
-      attachments: [],
-    };
-
-    await downloadDocx(newCircular);
-    setSubmitting(false);
-    createCircular(newCircular);
   }
 
   return (
@@ -242,6 +249,26 @@ export default function CreateCircularPage() {
                     }`}
                   >
                     {p.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+            
+            <div className="bg-white rounded-2xl border border-[#eaecf5] p-4 shadow-sm sm:col-span-2">
+              <label className={LABEL_CLS}>Document Margins</label>
+              <div className="flex gap-2 flex-wrap">
+                {(["normal", "narrow", "wide"] as const).map(m => (
+                  <button
+                    key={m}
+                    type="button"
+                    onClick={() => setMargins(m)}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all capitalize ${
+                      margins === m
+                        ? "bg-[#1a3567] text-white border-[#1a3567] shadow-sm ring-2 ring-offset-1 ring-[#1a3567]"
+                        : "bg-[#f8faff] text-[#8a93b3] border-[#dde3f0] hover:border-[#b0bcd8]"
+                    }`}
+                  >
+                    {m}
                   </button>
                 ))}
               </div>
@@ -371,24 +398,6 @@ export default function CreateCircularPage() {
             </div>
             <p className="text-[10px] text-[#b0b9d4] mt-2 mb-4">Leave empty to default to your own department</p>
 
-            <label className={LABEL_CLS}>Target Individuals (Optional)</label>
-            <div className="flex flex-wrap gap-2">
-              {USERS.filter(u => u.id !== user.id).map(u => (
-                <button
-                  type="button"
-                  key={u.id}
-                  onClick={() => toggleUser(u.id)}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-all ${
-                    targetUsers.includes(u.id)
-                      ? "bg-[#1a3567] text-white border-[#1a3567] shadow-sm"
-                      : "bg-[#f8faff] text-[#5a6483] border-[#dde3f0] hover:border-[#b0bcd8]"
-                  }`}
-                >
-                  {u.name} ({u.designation})
-                </button>
-              ))}
-            </div>
-            <p className="text-[10px] text-[#b0b9d4] mt-2">Specifically send to these individuals</p>
 
             {/* Live distribution preview */}
             {(() => {
@@ -434,6 +443,15 @@ export default function CreateCircularPage() {
               content={contentHtml}
               onChange={setContentHtml}
               placeholder="Write the full circular body here. Use the toolbar for formatting."
+            />
+          </div>
+
+          <div className="bg-white rounded-2xl border border-[#eaecf5] p-4 shadow-sm">
+            <label className={LABEL_CLS}>Attachment (Optional)</label>
+            <input 
+              type="file" 
+              onChange={e => setFile(e.target.files?.[0] || null)}
+              className="text-sm text-[#0f1c3f]"
             />
           </div>
 

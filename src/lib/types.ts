@@ -4,7 +4,7 @@ export type Role =
   | "principal"
   | "placement_coordinator"
   | "placement_director"
-  | "event_coordinator";
+  | "training_coordinator";
 
 export type Dept =
   | "CSE"
@@ -28,8 +28,8 @@ export type CircularType =
 
 // Workflow per type:
 // departmental       : pending_hod → pending_principal → approved
-// inter_department   : pending_hod → pending_event_coordinator → approved
-// event              : pending_hod → pending_event_coordinator → approved
+// inter_department   : pending_hod → pending_training_coordinator → approved
+// event              : pending_hod → pending_training_coordinator → approved
 // placement          : pending_placement_director → pending_principal → approved
 // all_department     : pending_principal → approved
 // examination        : pending_principal → approved
@@ -39,7 +39,7 @@ export type CircularStatus =
   | "pending_hod"
   | "pending_principal"
   | "pending_placement_director"
-  | "pending_event_coordinator"
+  | "pending_training_coordinator"
   | "approved"
   | "changes_requested"
   | "rejected";
@@ -63,10 +63,13 @@ export interface User {
 }
 
 export interface Sig {
+  id: string;
+  circularId: string;
   userId: string;
   userName: string;
   designation: string;
-  department: Dept;
+  department: string;
+  role?: Role;
   signedAt: string;
 }
 
@@ -91,6 +94,7 @@ export interface Circular {
   subject: string;
   content: string;
   contentHtml?: string;
+  margins?: "normal" | "narrow" | "wide";
   approvalFlow?: Role[];   // ordered list of approver roles chosen at creation
   createdById: string;
   createdByName: string;

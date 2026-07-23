@@ -169,7 +169,7 @@ function allBordersNone() {
 type SigSlot = { label: string; signed: boolean; name: string; desig: string; dept: string; date: string; userId?: string };
 
 function buildAllSigSlots(circular: Circular): SigSlot[] {
-  const creator = USERS.find(u => u.id === circular.createdById);
+  const creator = { name: circular.createdByName, designation: circular.createdByRole, department: circular.department };
   const slots: SigSlot[] = [];
 
   slots.push({
@@ -184,10 +184,10 @@ function buildAllSigSlots(circular: Circular): SigSlot[] {
 
   const ROLE_LABEL_MAP: Record<string, string> = {
     hod: "HOD", principal: "Principal",
-    placement_director: "Placement Director", event_coordinator: "Event Coordinator",
+    placement_director: "Placement Director", training_coordinator: "Training Coordinator",
   };
   const approverDefs: { role: string; label: string }[] = [];
-  if (circular.approvalFlow && circular.approvalFlow.length > 0) {
+  if (Array.isArray(circular.approvalFlow) && circular.approvalFlow.length > 0) {
     for (const role of circular.approvalFlow) {
       approverDefs.push({ role, label: ROLE_LABEL_MAP[role] ?? role });
     }
@@ -196,7 +196,7 @@ function buildAllSigSlots(circular: Circular): SigSlot[] {
     approverDefs.push({ role: "principal", label: "Principal" });
   } else if (circular.type === "inter_department" || circular.type === "event") {
     approverDefs.push({ role: "hod", label: "HOD" });
-    approverDefs.push({ role: "event_coordinator", label: "Event Coordinator" });
+    approverDefs.push({ role: "training_coordinator", label: "Training Coordinator" });
   } else if (circular.type === "all_department" || circular.type === "examination") {
     approverDefs.push({ role: "principal", label: "Principal" });
   } else {
@@ -205,9 +205,8 @@ function buildAllSigSlots(circular: Circular): SigSlot[] {
   }
 
   const sigByRole: Record<string, typeof circular.signatures[0]> = {};
-  for (const sig of circular.signatures) {
-    const u = USERS.find(u => u.id === sig.userId);
-    if (u) sigByRole[u.role] = sig;
+  for (const sig of (circular.signatures || [])) {
+    if (sig.role) sigByRole[sig.role] = sig;
   }
 
   for (const { role, label } of approverDefs) {
@@ -516,11 +515,17 @@ export async function downloadDocx(circular: Circular): Promise<void> {
   const circularTypeLabel = typeMap[circular.type] ?? "Circular";
 
   // "Circular issued by" field
-  const creator = USERS.find(u => u.id === circular.createdById);
+  const creator = { name: circular.createdByName, designation: circular.createdByRole, department: circular.department };
   const issuedBy = `${circular.createdByName}${creator?.designation ? `, ${creator.designation}` : ""} – ${circular.department}`;
 
   // Distribution list
   const distDepts = circular.targetDepts.length > 0 ? circular.targetDepts : [circular.department];
+
+  const docxMargin = circular.margins === "narrow" 
+    ? { top: 720, bottom: 720, left: 720, right: 720 }
+    : circular.margins === "wide"
+    ? { top: 1440, bottom: 1440, left: 2160, right: 2160 }
+    : { top: 1080, bottom: 1080, left: 1440, right: 1440 };
 
   const doc = new Document({
     styles: {
@@ -530,7 +535,7 @@ export async function downloadDocx(circular: Circular): Promise<void> {
     },
     sections: [{
       properties: {
-        page: { margin: { top: 720, bottom: 720, left: 1080, right: 1080 } },
+        page: { margin: docxMargin },
       },
       children: [
         // ── Letterhead header table ──────────────────────────────────────
@@ -714,7 +719,11 @@ export async function downloadDocx(circular: Circular): Promise<void> {
 // ── PDF download ───────────────────────────────────────────────────────────
 export async function downloadPdf(circular: Circular): Promise<void> {
   const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
-  const W = 210, ml = 18, mr = 18, textW = W - ml - mr;
+  const W = 210;
+  let ml = 18, mr = 18;
+  if (circular.margins === "narrow") { ml = 10; mr = 10; }
+  else if (circular.margins === "wide") { ml = 30; mr = 30; }
+  const textW = W - ml - mr;
   let y = 15;
 
   const navy = [26, 53, 103] as [number, number, number];
@@ -799,7 +808,7 @@ export async function downloadPdf(circular: Circular): Promise<void> {
   ], 7);
 
   // ── Fields table ────────────────────────────────────────────────────────
-  const creator = USERS.find(u => u.id === circular.createdById);
+  const creator = { name: circular.createdByName, designation: circular.createdByRole, department: circular.department };
   const issuedBy = `${circular.createdByName}${creator?.designation ? `, ${creator.designation}` : ""}`;
   const toText = circular.targetDepts.map(d => `All Students & Faculty – ${d}`).join("; ");
   const toLines = doc.splitTextToSize(toText, textW - 36);

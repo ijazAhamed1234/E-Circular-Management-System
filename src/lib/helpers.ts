@@ -7,7 +7,7 @@ export function statusLabel(s: CircularStatus): string {
     pending_hod: "Pending HOD",
     pending_principal: "Pending Principal",
     pending_placement_director: "Pending Placement Director",
-    pending_event_coordinator: "Pending Event Coordinator",
+    pending_training_coordinator: "Pending Training Coordinator",
     approved: "Approved",
     changes_requested: "Changes Requested",
     rejected: "Rejected",
@@ -82,48 +82,69 @@ const ROLE_TO_STATUS: Partial<Record<Role, CircularStatus>> = {
   hod:                  "pending_hod",
   principal:            "pending_principal",
   placement_director:   "pending_placement_director",
-  event_coordinator:    "pending_event_coordinator",
+  training_coordinator: "pending_training_coordinator",
 };
 const STATUS_TO_ROLE: Partial<Record<CircularStatus, Role>> = {
   pending_hod:                  "hod",
   pending_principal:            "principal",
   pending_placement_director:   "placement_director",
-  pending_event_coordinator:    "event_coordinator",
+  pending_training_coordinator: "training_coordinator",
 };
 
 // ── Access control ──────────────────────────────────────────
 export function canAct(user: User, c: Circular): boolean {
-  // HOD check: must match department
+  // Check if this user's role matches the current pending status
   if (user.role === "hod" && c.status === "pending_hod") {
-    return c.department === user.department;
+    // HOD can act if: same department OR explicitly in approvalFlow
+    if (c.department === user.department) return true;
+    if (Array.isArray(c.approvalFlow) && c.approvalFlow.includes("hod")) return true;
+    return false;
   }
   if (user.role === "principal"          && c.status === "pending_principal")           return true;
   if (user.role === "placement_director" && c.status === "pending_placement_director")  return true;
-  if (user.role === "event_coordinator"  && c.status === "pending_event_coordinator")   return true;
+  if (user.role === "training_coordinator"  && c.status === "pending_training_coordinator")   return true;
   return false;
 }
 
 export function visibleTo(user: User, circulars: Circular[]): Circular[] {
-  const inFlow = (c: Circular) => c.approvalFlow?.includes(user.role) ?? false;
+  const inFlow = (c: Circular) =>
+    Array.isArray(c.approvalFlow) && c.approvalFlow.includes(user.role);
+
   switch (user.role) {
     case "staff":
-      return circulars.filter(c => c.createdById === user.id);
+    case "placement_coordinator":
+      // Staff/placement coordinators see:
+      // 1. Circulars they created
+      // 2. Approved circulars addressed to their department
+      return circulars.filter(c =>
+        c.createdById === user.id ||
+        (c.status === "approved" && (
+          c.targetDepts.includes(user.department) ||
+          c.type === "all_department"
+        ))
+      );
     case "hod":
+      // HOD sees: circulars from their dept, circulars they need to review, or all-dept/exam circulars
       return circulars.filter(c =>
         c.department === user.department ||
         c.type === "all_department" ||
         c.type === "examination" ||
-        inFlow(c)
+        inFlow(c) ||
+        canAct(user, c)
       );
     case "principal":
+      // Principal sees everything not in draft
       return circulars.filter(c => c.status !== "draft");
-    case "placement_coordinator":
-      return circulars.filter(c => c.type === "placement" || c.createdById === user.id);
-    case "placement_director":
-      return circulars.filter(c => c.type === "placement" || inFlow(c));
-    case "event_coordinator":
+    case "training_coordinator":
+      // Training coordinator sees: inter-dept, event circulars, their own, and anything in their flow
       return circulars.filter(c =>
-        c.type === "inter_department" || c.type === "event" || c.createdById === user.id || inFlow(c)
+        c.type === "inter_department" || c.type === "event" ||
+        c.createdById === user.id || inFlow(c) ||
+        c.status === "pending_training_coordinator"
+      );
+    case "placement_director":
+      return circulars.filter(c =>
+        c.type === "placement" || inFlow(c) || c.status === "pending_placement_director"
       );
     default:
       return circulars;
@@ -135,7 +156,7 @@ export function visibleTo(user: User, circulars: Circular[]): Circular[] {
 // Returns the next status after a successful approval
 export function nextStatus(c: Circular): CircularStatus {
   // Custom flow: advance to next role in approvalFlow
-  if (c.approvalFlow && c.approvalFlow.length > 0) {
+  if (Array.isArray(c.approvalFlow) && c.approvalFlow.length > 0) {
     const currentRole = STATUS_TO_ROLE[c.status];
     if (currentRole) {
       const idx = c.approvalFlow.indexOf(currentRole);
@@ -153,8 +174,8 @@ export function nextStatus(c: Circular): CircularStatus {
     if (status === "pending_principal") return "approved";
   }
   if (type === "inter_department" || type === "event") {
-    if (status === "pending_hod") return "pending_event_coordinator";
-    if (status === "pending_event_coordinator") return "approved";
+    if (status === "pending_hod") return "pending_training_coordinator";
+    if (status === "pending_training_coordinator") return "approved";
   }
   if (type === "placement") {
     if (status === "pending_placement_director") return "pending_principal";
@@ -166,7 +187,7 @@ export function nextStatus(c: Circular): CircularStatus {
 // Returns the first pending status for a newly submitted circular
 export function initStatus(type: CircularType, role: Role, approvalFlow?: Role[]): CircularStatus {
   // Custom flow: start with first approver
-  if (approvalFlow && approvalFlow.length > 0) {
+  if (Array.isArray(approvalFlow) && approvalFlow.length > 0) {
     return ROLE_TO_STATUS[approvalFlow[0]] ?? "approved";
   }
 
@@ -176,7 +197,7 @@ export function initStatus(type: CircularType, role: Role, approvalFlow?: Role[]
     return "pending_hod";
   }
   if (type === "inter_department" || type === "event") {
-    if (role === "hod") return "pending_event_coordinator";
+    if (role === "hod") return "pending_training_coordinator";
     return "pending_hod";
   }
   // departmental
@@ -187,20 +208,17 @@ export function initStatus(type: CircularType, role: Role, approvalFlow?: Role[]
 
 const ROLE_LABEL: Record<Role, string> = {
   hod: "HOD", principal: "Principal",
-  placement_director: "Placement Director", event_coordinator: "Event Coordinator",
+  placement_director: "Placement Director", training_coordinator: "Training Coordinator",
   staff: "Faculty", placement_coordinator: "Placement Coordinator",
 };
 
 // Returns the visual workflow steps for a circular
 export function getWorkflowSteps(c: Circular, users: User[]): WorkflowStep[] {
   const hasSigned = (role: Role) =>
-    c.signatures.some(s => {
-      const u = users.find(u => u.id === s.userId);
-      return u?.role === role;
-    });
+    (c.signatures || []).some(s => s.role === role);
 
   // Custom flow
-  if (c.approvalFlow && c.approvalFlow.length > 0) {
+  if (Array.isArray(c.approvalFlow) && c.approvalFlow.length > 0) {
     return [
       { label: "Submitted", role: null, done: true },
       ...c.approvalFlow.map((role, i) => {
@@ -228,7 +246,7 @@ export function getWorkflowSteps(c: Circular, users: User[]): WorkflowStep[] {
     return [
       { label: "Submitted", role: null, done: true },
       { label: "HOD", role: "hod", done: hasSigned("hod") },
-      { label: "Event Coordinator", role: "event_coordinator", done: hasSigned("event_coordinator") || c.status === "approved" },
+      { label: "Training Coordinator", role: "training_coordinator", done: hasSigned("training_coordinator") || c.status === "approved" },
       { label: "Approved", role: null, done: c.status === "approved" },
     ];
   }

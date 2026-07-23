@@ -27,7 +27,7 @@ const ROLE_META: Record<Role, { label: string; color: string; bg: string; icon: 
   principal:            { label: "Principal's Office",    color: "#fbbf24", bg: "rgba(251,191,36,0.18)",  icon: <Shield size={12} /> },
   placement_coordinator:{ label: "Placement Portal",      color: "#34d399", bg: "rgba(52,211,153,0.18)",  icon: <Briefcase size={12} /> },
   placement_director:   { label: "Placement Director",    color: "#fb7185", bg: "rgba(251,113,133,0.18)", icon: <Star size={12} /> },
-  event_coordinator:    { label: "Events Portal",         color: "#f472b6", bg: "rgba(244,114,182,0.18)", icon: <CalendarDays size={12} /> },
+  training_coordinator:    { label: "Events Portal",         color: "#f472b6", bg: "rgba(244,114,182,0.18)", icon: <CalendarDays size={12} /> },
 };
 
 function buildNavItems(user: User, circulars: Circular[]): NavItem[] {
@@ -72,7 +72,7 @@ function buildNavItems(user: User, circulars: Circular[]): NavItem[] {
         { id: "/circulars",     label: "Placement Approvals",icon: <Briefcase size={17} />,       badge: actionCount, section: "APPROVALS" },
         { id: "/notifications", label: "Notifications",     icon: <Bell size={17} /> },
       ];
-    case "event_coordinator":
+    case "training_coordinator":
       return [
         { id: "/dashboard",     label: "Dashboard",       icon: <LayoutDashboard size={17} />, section: "OVERVIEW" },
         { id: "/circulars",     label: "Event Circulars", icon: <CalendarDays size={17} />,     badge: actionCount, section: "CIRCULARS" },

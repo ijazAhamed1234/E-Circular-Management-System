@@ -13,7 +13,7 @@ const ROLE_LABEL: Record<Role, string> = {
   principal: "Principal",
   placement_coordinator: "Placement Coordinator",
   placement_director: "Director of Placements",
-  event_coordinator: "Event Coordinator",
+  training_coordinator: "Training Coordinator",
 };
 
 export default function DashboardPage() {
@@ -25,7 +25,7 @@ export default function DashboardPage() {
 
   const stats = {
     total: myCirculars.length,
-    pending: myCirculars.filter(c => ["pending_hod", "pending_principal", "pending_placement_director", "pending_event_coordinator"].includes(c.status)).length,
+    pending: myCirculars.filter(c => ["pending_hod", "pending_principal", "pending_placement_director", "pending_training_coordinator"].includes(c.status)).length,
     approved: myCirculars.filter(c => c.status === "approved").length,
     changes: myCirculars.filter(c => c.status === "changes_requested").length,
     actionRequired: myCirculars.filter(c => canAct(user, c)).length,

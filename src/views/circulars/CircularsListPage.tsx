@@ -20,11 +20,11 @@ interface TabConfig {
 
 const PENDING_STATUSES: CircularStatus[] = [
   "pending_hod", "pending_principal",
-  "pending_placement_director", "pending_event_coordinator",
+  "pending_placement_director", "pending_training_coordinator",
 ];
 
 function getTabsForRole(role: Role): TabConfig[] {
-  if (role === "hod" || role === "principal" || role === "placement_director" || role === "event_coordinator") {
+  if (role === "hod" || role === "principal" || role === "placement_director" || role === "training_coordinator") {
     return [
       {
         id: "action",
@@ -46,7 +46,7 @@ function getTabsForRole(role: Role): TabConfig[] {
       },
     ];
   }
-  // staff, placement_coordinator, event_coordinator as creator
+  // staff, placement_coordinator, training_coordinator as creator
   return [
     {
       id: "all",
@@ -107,7 +107,7 @@ export default function CircularsListPage() {
     return [...list].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
   }, [myCirculars, currentTab, search, user]);
 
-  const canCreate = ["staff", "hod", "placement_coordinator", "event_coordinator"].includes(user.role);
+  const canCreate = ["staff", "hod", "placement_coordinator", "training_coordinator"].includes(user.role);
 
   // Changes-requested items (shown prominently for creator roles)
   const changesItems = myCirculars.filter(c => c.status === "changes_requested" && c.createdById === user.id);
@@ -121,7 +121,7 @@ export default function CircularsListPage() {
             {user.role === "hod" ? "HOD Review Dashboard"
              : user.role === "principal" ? "Principal Approval Dashboard"
              : user.role === "placement_director" ? "Placement Director Dashboard"
-             : user.role === "event_coordinator" ? "Event Coordinator Dashboard"
+             : user.role === "training_coordinator" ? "Training Coordinator Dashboard"
              : "My Circulars"}
           </h2>
           <p className="text-xs text-[#6b7597] mt-0.5">{filtered.length} of {myCirculars.length} circulars shown</p>

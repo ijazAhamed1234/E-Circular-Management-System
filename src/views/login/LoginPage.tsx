@@ -15,7 +15,7 @@ const ROLE_CHIP: Record<Role, { cls: string; icon: React.ReactNode; label: strin
   principal: { cls: "bg-amber-50 text-amber-700 border-amber-200", icon: <Shield size={10} />, label: "Principal" },
   placement_coordinator: { cls: "bg-teal-50 text-teal-700 border-teal-200", icon: <Briefcase size={10} />, label: "Placement Coord." },
   placement_director: { cls: "bg-rose-50 text-rose-700 border-rose-200", icon: <Star size={10} />, label: "Placement Director" },
-  event_coordinator: { cls: "bg-pink-50 text-pink-700 border-pink-200", icon: <CalendarDays size={10} />, label: "Event Coordinator" },
+  training_coordinator: { cls: "bg-pink-50 text-pink-700 border-pink-200", icon: <CalendarDays size={10} />, label: "Training Coordinator" },
 };
 
 export default function LoginPage() {
@@ -27,11 +27,14 @@ export default function LoginPage() {
   const [error, setError] = useState("");
   const [showDemo, setShowDemo] = useState(false);
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    const user = USERS.find(u => u.email === email && u.password === password);
-    if (user) login(user);
-    else setError("Invalid email or password. Please try a demo account below.");
+    setError("");
+    try {
+      await login(email, password);
+    } catch (err: any) {
+      setError(err.message || "Invalid email or password. Please try a demo account below.");
+    }
   }
 
   return (
@@ -254,7 +257,7 @@ export default function LoginPage() {
                     return (
                       <button
                         key={u.id}
-                        onClick={() => { setEmail(u.email); setPassword(u.password); setError(""); setShowDemo(false); }}
+                        onClick={() => { setEmail(u.email); setPassword('password123'); setError(""); setShowDemo(false); }}
                         className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg hover:bg-[#f4f6fc] border border-transparent hover:border-[#e2e7f0] transition-all text-left group"
                       >
                         <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium border shrink-0 ${chip.cls}`}>

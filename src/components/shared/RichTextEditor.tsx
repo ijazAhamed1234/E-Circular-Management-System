@@ -1,11 +1,26 @@
 import { useEditor, EditorContent } from "@tiptap/react";
+import React, { useEffect } from "react";
 import StarterKit from "@tiptap/starter-kit";
 import TextAlign from "@tiptap/extension-text-align";
+import Color from "@tiptap/extension-color";
+import { TextStyle } from "@tiptap/extension-text-style";
+import FontFamily from "@tiptap/extension-font-family";
+import Highlight from "@tiptap/extension-highlight";
+import Subscript from "@tiptap/extension-subscript";
+import Superscript from "@tiptap/extension-superscript";
+import Image from "@tiptap/extension-image";
 import {
   Bold, Italic, Underline as UnderlineIcon,
   List, ListOrdered, AlignLeft, AlignCenter, AlignRight,
-  Undo2, Redo2, Heading1, Heading2,
+  Undo2, Redo2, Heading1, Heading2, Table as TableIcon,
+  Trash2, PlusSquare, SplitSquareHorizontal, SplitSquareVertical,
+  Highlighter, Subscript as SubscriptIcon, Superscript as SuperscriptIcon, ImageIcon, Palette, Type,
+  Rows3, Columns3
 } from "lucide-react";
+import { Table } from '@tiptap/extension-table';
+import { TableRow } from '@tiptap/extension-table-row';
+import { TableHeader } from '@tiptap/extension-table-header';
+import { TableCell } from '@tiptap/extension-table-cell';
 
 interface Props {
   content: string;
@@ -42,6 +57,17 @@ export default function RichTextEditor({ content, onChange, placeholder = "Write
     extensions: [
       StarterKit.configure({ heading: { levels: [1, 2, 3] } }),
       TextAlign.configure({ types: ["heading", "paragraph"] }),
+      TextStyle,
+      Color,
+      FontFamily,
+      Highlight.configure({ multicolor: true }),
+      Subscript,
+      Superscript,
+      Image.configure({ inline: true, allowBase64: true }),
+      Table.configure({ resizable: true }),
+      TableRow,
+      TableHeader,
+      TableCell,
     ],
     content,
     onUpdate({ editor }) {
@@ -53,6 +79,12 @@ export default function RichTextEditor({ content, onChange, placeholder = "Write
       },
     },
   });
+
+  useEffect(() => {
+    if (editor && content && content !== editor.getHTML()) {
+      editor.commands.setContent(content);
+    }
+  }, [content, editor]);
 
   if (!editor) return null;
 
@@ -78,6 +110,11 @@ export default function RichTextEditor({ content, onChange, placeholder = "Write
           float: left;
           height: 0;
         }
+        .prose-editor table { border-collapse: collapse; table-layout: fixed; width: 100%; margin: 1em 0; overflow: hidden; }
+        .prose-editor td, .prose-editor th { min-width: 1em; border: 1px solid #ced4da; padding: 6px 12px; vertical-align: top; box-sizing: border-box; position: relative; }
+        .prose-editor th { font-weight: bold; text-align: left; background-color: #f1f3f5; }
+        .prose-editor .column-resize-handle { position: absolute; right: -2px; top: 0; bottom: -2px; width: 4px; background-color: #adf; pointer-events: none; }
+        .prose-editor.resize-cursor { cursor: ew-resize; cursor: col-resize; }
         .ProseMirror:focus { outline: none; }
       `}</style>
 
@@ -126,6 +163,110 @@ export default function RichTextEditor({ content, onChange, placeholder = "Write
           onClick={() => editor.chain().focus().setTextAlign("right").run()}>
           <AlignRight size={13} />
         </ToolBtn>
+        <ToolBtn title="Subscript" active={editor.isActive("subscript")}
+          onClick={() => editor.chain().focus().toggleSubscript().run()}>
+          <SubscriptIcon size={13} />
+        </ToolBtn>
+        <ToolBtn title="Superscript" active={editor.isActive("superscript")}
+          onClick={() => editor.chain().focus().toggleSuperscript().run()}>
+          <SuperscriptIcon size={13} />
+        </ToolBtn>
+        {sep}
+        <div className="flex items-center relative gap-1">
+          <Palette size={13} className="text-[#4a5580] ml-1" />
+          <input
+            type="color"
+            title="Text Color"
+            className="w-5 h-5 p-0 border-0 cursor-pointer"
+            onInput={(e) => editor.chain().focus().setColor(e.currentTarget.value).run()}
+            value={editor.getAttributes("textStyle").color || "#000000"}
+          />
+        </div>
+        <div className="flex items-center relative gap-1">
+          <Highlighter size={13} className="text-[#4a5580] ml-1" />
+          <input
+            type="color"
+            title="Highlight Color"
+            className="w-5 h-5 p-0 border-0 cursor-pointer"
+            onInput={(e) => editor.chain().focus().toggleHighlight({ color: e.currentTarget.value }).run()}
+            value={editor.getAttributes("highlight").color || "#ffff00"}
+          />
+        </div>
+        <div className="flex items-center relative mx-1">
+          <select
+            title="Font Family"
+            onChange={(e) => editor.chain().focus().setFontFamily(e.target.value).run()}
+            className="text-[11px] bg-transparent outline-none cursor-pointer border rounded px-1 py-0.5 text-[#4a5580]"
+            value={editor.getAttributes('textStyle').fontFamily || ''}
+          >
+            <option value="">Default Font</option>
+            <option value="Arial">Arial</option>
+            <option value="Times New Roman">Times New</option>
+            <option value="Courier New">Courier</option>
+            <option value="Georgia">Georgia</option>
+          </select>
+        </div>
+        {sep}
+        <ToolBtn title="Insert Image" onClick={() => {
+          const url = window.prompt("Enter image URL");
+          if (url) {
+            editor.chain().focus().setImage({ src: url }).run();
+          }
+        }}>
+          <ImageIcon size={13} />
+        </ToolBtn>
+        <ToolBtn title="Insert Table" 
+          onClick={() => editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()}>
+          <TableIcon size={13} />
+        </ToolBtn>
+        {editor.isActive('table') && (
+          <>
+            {sep}
+            {/* Row operations */}
+            <ToolBtn title="Add Row Before" onClick={() => editor.chain().focus().addRowBefore().run()}>
+              <span className="flex flex-col items-center gap-0" title="Add Row Before">
+                <Rows3 size={10}/>
+                <span className="text-[7px] leading-none">+↑</span>
+              </span>
+            </ToolBtn>
+            <ToolBtn title="Add Row After" onClick={() => editor.chain().focus().addRowAfter().run()}>
+              <span className="flex flex-col items-center gap-0">
+                <Rows3 size={10}/>
+                <span className="text-[7px] leading-none">+↓</span>
+              </span>
+            </ToolBtn>
+            <ToolBtn title="Delete Row" onClick={() => editor.chain().focus().deleteRow().run()}>
+              <span className="flex flex-col items-center gap-0">
+                <Rows3 size={10}/>
+                <span className="text-[7px] leading-none text-red-400">✕</span>
+              </span>
+            </ToolBtn>
+            {sep}
+            {/* Column operations */}
+            <ToolBtn title="Add Column Before" onClick={() => editor.chain().focus().addColumnBefore().run()}>
+              <span className="flex flex-col items-center gap-0">
+                <Columns3 size={10}/>
+                <span className="text-[7px] leading-none">+←</span>
+              </span>
+            </ToolBtn>
+            <ToolBtn title="Add Column After" onClick={() => editor.chain().focus().addColumnAfter().run()}>
+              <span className="flex flex-col items-center gap-0">
+                <Columns3 size={10}/>
+                <span className="text-[7px] leading-none">+→</span>
+              </span>
+            </ToolBtn>
+            <ToolBtn title="Delete Column" onClick={() => editor.chain().focus().deleteColumn().run()}>
+              <span className="flex flex-col items-center gap-0">
+                <Columns3 size={10}/>
+                <span className="text-[7px] leading-none text-red-400">✕</span>
+              </span>
+            </ToolBtn>
+            {sep}
+            <ToolBtn title="Delete Table" onClick={() => editor.chain().focus().deleteTable().run()}>
+              <Trash2 size={13} className="text-red-400" />
+            </ToolBtn>
+          </>
+        )}
         {sep}
         <ToolBtn title="Undo" onClick={() => editor.chain().focus().undo().run()}>
           <Undo2 size={13} />
